@@ -1,0 +1,72 @@
+# Data Flow
+
+## Build Pipeline (Email to Memory)
+
+```mermaid
+flowchart LR
+    subgraph "Step 1: Fetch"
+        Gmail[Gmail API] -->|messages.list + get| Emails[Raw Emails JSON]
+    end
+
+    subgraph "Step 2: Filter"
+        Emails --> Dedup{Already processed?}
+        Dedup -->|Yes| Skip[Skip]
+        Dedup -->|No| New[New Emails]
+    end
+
+    subgraph "Step 3: Batch Analyze"
+        New -->|Batches of 10| ER[Email Reader Agent]
+        ER -->|Claude API| Observations[Text Observations]
+    end
+
+    subgraph "Step 4: Write"
+        Observations --> MW[Memory Writer Agent]
+        MW -->|Claude API + MCP tools| Vault[Vault Files]
+    end
+
+    subgraph "Step 5: Track"
+        Vault --> IDs[Save processed IDs]
+    end
+```
+
+### Batch processing detail
+
+1. Orchestrator fetches up to 500 emails from last 180 days
+2. Loads `_processed_emails.json`, filters out already-seen IDs
+3. Splits remaining into batches of `EMAIL_BATCH_SIZE` (10)
+4. Each batch sent to `EmailReaderAgent.analyze_batch()` which returns text observations
+5. All observations concatenated and sent to `MemoryWriterAgent.run()` to create vault files
+6. Newly processed IDs saved to `_processed_emails.json`
+
+### Progress events (SSE)
+
+Each pipeline stage emits progress events via callback to queue to SSE:
+- `fetching` then `email_reader` (per batch) then `memory_writer` then `complete`
+
+## Query Pipeline
+
+```mermaid
+flowchart LR
+    User[User Question] --> QA[Query Agent]
+    QA -->|search_vault tool| Search[Vault Search]
+    QA -->|read_memory tool| Read[Memory Files]
+    Search --> QA
+    Read --> QA
+    QA -->|Claude API| Answer[Synthesized Answer]
+```
+
+## Auth Flow
+
+```mermaid
+flowchart TD
+    Load[Page Load] --> Check{/api/auth/status}
+    Check -->|authenticated| Main[Show Main App]
+    Check -->|not authenticated| Login[Show Login Page]
+    Login -->|Click Sign In| OAuth[POST /api/auth/google]
+    OAuth --> Google[Google OAuth Consent]
+    Google -->|Approved| Token[Save OAuth token]
+    Token --> Main
+    Main -->|Auto-build| Build[Start Incremental Build]
+    Main -->|Logout| Del[POST /api/auth/logout]
+    Del -->|Delete token| Login
+```

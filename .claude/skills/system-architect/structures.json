@@ -1,0 +1,183 @@
+{
+  "python": {
+    "fastapi": {
+      "name": "FastAPI Service",
+      "description": "Modern, fast (high-performance) web framework for building APIs with Python 3.7+ based on standard Python type hints.",
+      "structure": [
+        "project_root/",
+        "├── app/",
+        "│   ├── __init__.py",
+        "│   ├── main.py              # Application entry point",
+        "│   ├── core/                # Core configuration",
+        "│   │   ├── config.py        # Pydantic settings",
+        "│   │   └── security.py      # Auth logic",
+        "│   ├── api/                 # API endpoints",
+        "│   │   ├── v1/              # API versioning",
+        "│   │   │   ├── endpoints/   # Route handlers",
+        "│   │   │   └── api.py       # Router aggregation",
+        "│   ├── crud/                # Database operations",
+        "│   ├── models/              # SQL/ORM models",
+        "│   ├── schemas/             # Pydantic models (DTOs)",
+        "│   └── db/                  # Database connection/session",
+        "├── tests/",
+        "├── alembic/                 # Migrations",
+        "├── docker-compose.yml",
+        "├── Dockerfile",
+        "├── pyproject.toml           # Poetry/dependencies",
+        "└── README.md"
+      ]
+    },
+    "django": {
+      "name": "Django Project (Cookiecutter Style)",
+      "description": "High-level Python Web framework that encourages rapid development and clean, pragmatic design.",
+      "structure": [
+        "project_root/",
+        "├── config/                  # Project configuration",
+        "│   ├── settings/            # Settings split by env",
+        "│   │   ├── base.py",
+        "│   │   ├── local.py",
+        "│   │   └── production.py",
+        "│   ├── urls.py",
+        "│   └── wsgi.py",
+        "├── apps/                    # Application modules",
+        "│   ├── users/               # Custom user model",
+        "│   └── core/                # Core functionality",
+        "├── templates/               # Global templates",
+        "├── static/                  # Global static files",
+        "├── media/                   # User uploaded files",
+        "├── requirements/            # Requirements files",
+        "├── manage.py",
+        "├── Dockerfile",
+        "└── compose.yml"
+      ]
+    }
+  },
+  "typescript": {
+    "nextjs_app_router": {
+      "name": "Next.js 14+ (App Router)",
+      "description": "The React Framework for the Web. Using the modern App Router.",
+      "structure": [
+        "project_root/",
+        "├── app/                     # App Router",
+        "│   ├── layout.tsx           # Root layout",
+        "│   ├── page.tsx             # Home page",
+        "│   ├── globals.css          # Global styles",
+        "│   ├── (auth)/              # Route grouping",
+        "│   │   ├── login/page.tsx",
+        "│   │   └── register/page.tsx",
+        "│   └── api/                 # API Routes",
+        "├── components/              # React components",
+        "│   ├── ui/                  # Reusable UI components (shadcn/ui)",
+        "│   └── feature/             # Feature-specific components",
+        "├── lib/                     # Utilities & config",
+        "│   ├── utils.ts",
+        "│   └── prisma.ts",
+        "├── types/                   # TypeScript definitions",
+        "├── public/                  # Static assets",
+        "├── next.config.js",
+        "├── tailwind.config.ts",
+        "└── package.json"
+      ]
+    },
+    "react_vite": {
+      "name": "React (Vite)",
+      "description": "Fast and modern build tool for React applications.",
+      "structure": [
+        "project_root/",
+        "├── src/",
+        "│   ├── assets/",
+        "│   ├── components/          # Shared components",
+        "│   ├── features/            # Feature-based architecture",
+        "│   │   └── auth/",
+        "│   │       ├── api/         # API calls",
+        "│   │       ├── components/  # Local components",
+        "│   │       ├── hooks/       # Local hooks",
+        "│   │       ├── routes/      # Feature routes",
+        "│   │       └── types/       # Local types",
+        "│   ├── hooks/               # Global hooks",
+        "│   ├── lib/                 # Axios, etc.",
+        "│   ├── routes/              # App routing",
+        "│   ├── stores/              # State management",
+        "│   ├── utils/",
+        "│   ├── App.tsx",
+        "│   └── main.tsx",
+        "├── public/",
+        "├── vite.config.ts",
+        "└── package.json"
+      ]
+    },
+    "express": {
+      "name": "Express (TypeScript)",
+      "description": "Minimal and flexible Node.js web application framework.",
+      "structure": [
+        "project_root/",
+        "├── src/",
+        "│   ├── config/              # Environment config",
+        "│   ├── controllers/         # Request handlers",
+        "│   ├── middlewares/         # Express middlewares",
+        "│   ├── models/              # Mongoose/TypeORM models",
+        "│   ├── routes/              # Route definitions",
+        "│   ├── services/            # Business logic",
+        "│   ├── utils/               # Helper functions",
+        "│   ├── app.ts               # App setup",
+        "│   └── server.ts            # Entry point",
+        "├── dist/                    # Compiled JS",
+        "├── tests/",
+        "├── tsconfig.json",
+        "└── package.json"
+      ]
+    }
+  },
+  "java": {
+    "springboot": {
+      "name": "Spring Boot (Modern)",
+      "description": "Stand-alone, production-grade Spring based Applications.",
+      "structure": [
+        "project_root/",
+        "├── src/",
+        "│   ├── main/",
+        "│   │   ├── java/com/example/app/",
+        "│   │   │   ├── api/                 # Controllers (Web Layer)",
+        "│   │   │   │   ├── dto/             # Data Transfer Objects",
+        "│   │   │   │   └── mapper/          # DTO Mappers",
+        "│   │   │   ├── domain/              # Business Domain",
+        "│   │   │   │   ├── model/           # Entities",
+        "│   │   │   │   ├── service/         # Interfaces",
+        "│   │   │   │   └── event/           # Domain Events",
+        "│   │   │   ├── infrastructure/      # Implementation Details",
+        "│   │   │   │   ├── persistence/     # Repositories (JPA)",
+        "│   │   │   │   └── config/          # Spring Config",
+        "│   │   │   └── Application.java",
+        "│   │   └── resources/",
+        "│   │       ├── application.yml",
+        "│   │       └── db/migration/        # Flyway/Liquibase",
+        "│   └── test/",
+        "├── build.gradle (or pom.xml)",
+        "└── Dockerfile"
+      ]
+    }
+  },
+  "go": {
+    "standard_layout": {
+      "name": "Go Standard Project Layout",
+      "description": "Common layout pattern for Go applications.",
+      "structure": [
+        "project_root/",
+        "├── cmd/                     # Main applications",
+        "│   └── myapp/               # Entry point",
+        "│       └── main.go",
+        "├── internal/                # Private application code",
+        "│   ├── app/                 # App logic",
+        "│   └── pkg/                 # Internal shared code",
+        "├── pkg/                     # Public library code (use sparingly)",
+        "├── api/                     # OpenAPI/Swagger specs, Proto files",
+        "├── web/                     # Static assets, templates",
+        "├── configs/                 # Config files",
+        "├── deployments/             # IaaS, Docker, K8s",
+        "├── go.mod",
+        "├── go.sum",
+        "└── Makefile"
+      ]
+    }
+  }
+}

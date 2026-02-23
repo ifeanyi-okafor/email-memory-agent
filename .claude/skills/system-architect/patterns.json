@@ -1,0 +1,334 @@
+{
+  "architectural_patterns": {
+    "monolith": {
+      "name": "Monolithic Architecture",
+      "description": "Single deployable unit containing all functionality",
+      "use_when": [
+        "Small team (< 10 developers)",
+        "Simple domain",
+        "MVP or prototype",
+        "Tight deadline",
+        "Unclear boundaries"
+      ],
+      "avoid_when": [
+        "Multiple teams need independent deployment",
+        "Different scaling requirements per feature",
+        "Technology diversity needed"
+      ],
+      "pros": [
+        "Simple development",
+        "Easy debugging",
+        "Single deployment",
+        "No network latency between components",
+        "ACID transactions"
+      ],
+      "cons": [
+        "Scaling limitations",
+        "Technology lock-in",
+        "Large codebase",
+        "Slow CI/CD",
+        "Risk of tight coupling"
+      ],
+      "technologies": ["Rails", "Django", "Laravel", "Spring Boot", "Next.js"]
+    },
+    "microservices": {
+      "name": "Microservices Architecture",
+      "description": "Distributed system of independently deployable services",
+      "use_when": [
+        "Large organization with multiple teams",
+        "Different scaling requirements",
+        "Need technology flexibility",
+        "Complex domain with clear boundaries"
+      ],
+      "avoid_when": [
+        "Small team",
+        "Simple application",
+        "Limited DevOps expertise",
+        "Unclear domain boundaries"
+      ],
+      "pros": [
+        "Independent scaling",
+        "Technology flexibility",
+        "Team autonomy",
+        "Fault isolation",
+        "Easier to understand individual services"
+      ],
+      "cons": [
+        "Distributed system complexity",
+        "Network latency",
+        "Data consistency challenges",
+        "Operational overhead",
+        "Testing complexity"
+      ],
+      "technologies": ["Kubernetes", "Docker", "Service Mesh", "API Gateway"]
+    },
+    "modular_monolith": {
+      "name": "Modular Monolith",
+      "description": "Monolith with well-defined module boundaries",
+      "use_when": [
+        "Want monolith simplicity with future extraction option",
+        "Need clear boundaries but single deployment",
+        "Medium-sized team"
+      ],
+      "pros": [
+        "Simple deployment",
+        "Clear boundaries",
+        "Easy to extract services later",
+        "Local transactions"
+      ],
+      "cons": [
+        "Requires discipline",
+        "Still single scaling unit",
+        "Shared database"
+      ],
+      "technologies": ["Nx", "Gradle multi-module", "Maven multi-module"]
+    },
+    "serverless": {
+      "name": "Serverless Architecture",
+      "description": "Event-driven functions without server management",
+      "use_when": [
+        "Unpredictable traffic",
+        "Event-driven workflows",
+        "Cost optimization for sporadic usage",
+        "Rapid development"
+      ],
+      "avoid_when": [
+        "Long-running processes",
+        "Cold start sensitivity",
+        "Complex local development needed"
+      ],
+      "pros": [
+        "No server management",
+        "Auto-scaling",
+        "Pay per use",
+        "Fast deployment"
+      ],
+      "cons": [
+        "Cold starts",
+        "Vendor lock-in",
+        "Limited execution time",
+        "Debugging complexity"
+      ],
+      "technologies": ["AWS Lambda", "Vercel Functions", "Cloudflare Workers", "Azure Functions"]
+    },
+    "event_driven": {
+      "name": "Event-Driven Architecture",
+      "description": "Components communicate through events",
+      "use_when": [
+        "Loose coupling needed",
+        "Async processing acceptable",
+        "Multiple consumers for events",
+        "Audit trail requirements"
+      ],
+      "pros": [
+        "Loose coupling",
+        "Scalability",
+        "Flexibility",
+        "Audit trail"
+      ],
+      "cons": [
+        "Eventual consistency",
+        "Debugging complexity",
+        "Event versioning",
+        "Message ordering"
+      ],
+      "technologies": ["Kafka", "RabbitMQ", "AWS SNS/SQS", "EventBridge"]
+    }
+  },
+  "data_patterns": {
+    "cqrs": {
+      "name": "Command Query Responsibility Segregation",
+      "description": "Separate read and write models",
+      "use_when": [
+        "Read/write patterns differ significantly",
+        "Complex queries needed",
+        "High read-to-write ratio"
+      ],
+      "technologies": ["Event Store", "Elasticsearch for reads", "PostgreSQL for writes"]
+    },
+    "event_sourcing": {
+      "name": "Event Sourcing",
+      "description": "Store state as sequence of events",
+      "use_when": [
+        "Complete audit trail needed",
+        "Need to replay/rebuild state",
+        "Complex business domain"
+      ],
+      "technologies": ["EventStoreDB", "Kafka", "Custom implementations"]
+    },
+    "saga": {
+      "name": "Saga Pattern",
+      "description": "Manage distributed transactions through compensating actions",
+      "use_when": [
+        "Cross-service transactions",
+        "Long-running business processes",
+        "Need rollback capability"
+      ],
+      "types": ["Choreography", "Orchestration"],
+      "technologies": ["Temporal", "Camunda", "Step Functions"]
+    },
+    "outbox": {
+      "name": "Outbox Pattern",
+      "description": "Reliable event publishing with database",
+      "use_when": [
+        "Need guaranteed event delivery",
+        "Dual-write problems",
+        "Event publishing reliability"
+      ],
+      "technologies": ["Debezium", "Custom polling"]
+    }
+  },
+  "api_patterns": {
+    "rest": {
+      "name": "REST",
+      "use_when": ["Standard CRUD", "Broad client support", "Caching important"],
+      "pros": ["Simple", "Cacheable", "Well understood"],
+      "cons": ["Over/under fetching", "Multiple round trips"]
+    },
+    "graphql": {
+      "name": "GraphQL",
+      "use_when": ["Flexible queries", "Multiple clients", "Rapid iteration"],
+      "pros": ["Flexible queries", "Strong typing", "Single endpoint"],
+      "cons": ["Caching complexity", "N+1 queries", "Learning curve"]
+    },
+    "grpc": {
+      "name": "gRPC",
+      "use_when": ["Service-to-service", "High performance", "Streaming"],
+      "pros": ["Fast", "Strongly typed", "Streaming support"],
+      "cons": ["Browser support", "Debugging", "Learning curve"]
+    }
+  },
+  "resilience_patterns": {
+    "circuit_breaker": {
+      "name": "Circuit Breaker",
+      "description": "Stop calling failing services",
+      "states": ["Closed", "Open", "Half-Open"],
+      "configuration": {
+        "failure_threshold": 5,
+        "timeout": "30s",
+        "half_open_requests": 3
+      },
+      "technologies": ["Resilience4j", "Polly", "Hystrix"]
+    },
+    "retry": {
+      "name": "Retry with Exponential Backoff",
+      "description": "Retry failed operations with increasing delays",
+      "configuration": {
+        "max_retries": 3,
+        "initial_delay": "100ms",
+        "max_delay": "10s",
+        "multiplier": 2
+      }
+    },
+    "bulkhead": {
+      "name": "Bulkhead",
+      "description": "Isolate failures to prevent cascade",
+      "types": ["Thread pool", "Semaphore"],
+      "use_when": ["Multiple downstream services", "Need failure isolation"]
+    },
+    "rate_limiting": {
+      "name": "Rate Limiting",
+      "algorithms": ["Token Bucket", "Leaky Bucket", "Fixed Window", "Sliding Window"],
+      "technologies": ["Redis", "Kong", "Nginx"]
+    }
+  },
+  "caching_patterns": {
+    "cache_aside": {
+      "name": "Cache-Aside (Lazy Loading)",
+      "description": "Application manages cache explicitly",
+      "flow": ["Check cache", "On miss: load from DB", "Store in cache"],
+      "pros": ["Simple", "Only caches used data"],
+      "cons": ["Cache miss penalty", "Stale data possible"]
+    },
+    "write_through": {
+      "name": "Write-Through",
+      "description": "Write to cache and DB synchronously",
+      "pros": ["Always consistent", "Simple reads"],
+      "cons": ["Write latency", "May cache unused data"]
+    },
+    "write_behind": {
+      "name": "Write-Behind (Write-Back)",
+      "description": "Write to cache, async write to DB",
+      "pros": ["Fast writes", "Batching possible"],
+      "cons": ["Data loss risk", "Complexity"]
+    }
+  },
+  "security_patterns": {
+    "authentication": {
+      "jwt": {
+        "use_when": ["Stateless", "Microservices", "Mobile apps"],
+        "considerations": ["Token expiry", "Refresh tokens", "Token size"]
+      },
+      "session": {
+        "use_when": ["Server-side rendering", "Simple apps"],
+        "considerations": ["Session storage", "Scaling"]
+      },
+      "oauth2": {
+        "use_when": ["Third-party auth", "API access", "SSO"],
+        "flows": ["Authorization Code", "Client Credentials", "Device Code"]
+      }
+    },
+    "authorization": {
+      "rbac": {
+        "name": "Role-Based Access Control",
+        "use_when": ["Simple permission model", "Clear role hierarchy"]
+      },
+      "abac": {
+        "name": "Attribute-Based Access Control",
+        "use_when": ["Complex policies", "Dynamic conditions"]
+      }
+    }
+  },
+  "database_selection": {
+    "postgresql": {
+      "type": "Relational",
+      "use_when": ["ACID required", "Complex queries", "JSON support needed"],
+      "scaling": "Vertical, read replicas, Citus for horizontal"
+    },
+    "mongodb": {
+      "type": "Document",
+      "use_when": ["Flexible schema", "Horizontal scaling", "Document model fits"],
+      "scaling": "Native sharding"
+    },
+    "redis": {
+      "type": "Key-Value/Cache",
+      "use_when": ["Caching", "Sessions", "Rate limiting", "Pub/sub"],
+      "scaling": "Redis Cluster"
+    },
+    "elasticsearch": {
+      "type": "Search",
+      "use_when": ["Full-text search", "Log analytics", "Complex queries"],
+      "considerations": ["Memory usage", "Index management"]
+    },
+    "cassandra": {
+      "type": "Wide-Column",
+      "use_when": ["Write-heavy", "Time-series", "Global distribution"],
+      "considerations": ["Query patterns", "Data modeling"]
+    },
+    "neo4j": {
+      "type": "Graph",
+      "use_when": ["Relationship-heavy data", "Social networks", "Recommendations"],
+      "considerations": ["Scaling", "Query patterns"]
+    }
+  },
+  "deployment_patterns": {
+    "blue_green": {
+      "name": "Blue-Green Deployment",
+      "description": "Two identical environments, instant switch",
+      "pros": ["Zero downtime", "Easy rollback"],
+      "cons": ["Double infrastructure", "Database migrations complex"]
+    },
+    "canary": {
+      "name": "Canary Deployment",
+      "description": "Gradual rollout to subset of users",
+      "pros": ["Risk mitigation", "Real user testing"],
+      "cons": ["Complexity", "Monitoring required"]
+    },
+    "rolling": {
+      "name": "Rolling Deployment",
+      "description": "Gradual instance replacement",
+      "pros": ["No extra infrastructure", "Gradual"],
+      "cons": ["Mixed versions temporarily", "Slower"]
+    }
+  }
+}
