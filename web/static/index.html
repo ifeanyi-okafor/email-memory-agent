@@ -1660,57 +1660,46 @@ a {
 
 .build-progress {
     margin-top: 20px;
-    padding: 20px;
+    padding: 16px 20px;
     background: var(--bg-primary);
     border-radius: var(--radius-sm);
     border: 1px solid var(--border-soft);
-}
-
-.progress-stages {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.progress-stage {
     display: flex;
     align-items: center;
-    gap: 10px;
-    font-size: 13px;
-    color: var(--text-secondary);
+    gap: 12px;
 }
 
-.progress-stage.active {
-    color: var(--accent-sage-deep);
-    font-weight: 500;
-}
-
-.progress-stage.done {
-    color: var(--accent-sage);
-}
-
-.progress-stage .stage-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--border-medium);
-    flex-shrink: 0;
-}
-
-.progress-stage.active .stage-dot {
+.progress-dot {
+    width: 10px;
+    height: 10px;
+    min-width: 10px;
+    border-radius: var(--radius-full);
     background: var(--accent-sage);
-    box-shadow: 0 0 8px var(--accent-sage-glow);
+    animation: buildPulse 1.5s ease-in-out infinite;
 }
 
-.progress-stage.done .stage-dot {
-    background: var(--accent-sage);
+.build-progress.done .progress-dot {
+    animation: none;
+}
+
+.build-progress.error .progress-dot {
+    animation: none;
+    background: var(--accent-warm);
 }
 
 .progress-message {
-    margin-top: 12px;
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+    font-family: var(--font-sans);
+}
+
+.progress-step {
+    font-family: var(--font-mono);
     font-size: 12px;
     color: var(--text-tertiary);
-    font-family: var(--font-mono);
+    white-space: nowrap;
 }
 
 /* ============================================================================
@@ -1978,8 +1967,6 @@ a {
     margin: 0 12px 8px;
     border-radius: var(--radius-sm);
     background: rgba(123, 158, 135, 0.08);
-    overflow: hidden;
-    position: relative;
 }
 .build-indicator.active {
     display: flex;
@@ -2011,32 +1998,24 @@ a {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    opacity: 1;
-    transition: opacity 0.25s var(--ease-gentle);
+    flex: 1;
+    min-width: 0;
 }
-.app-nav.collapsed .build-indicator-text {
+.build-indicator-step {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--text-nav);
+    opacity: 0.7;
+    white-space: nowrap;
+}
+.app-nav.collapsed .build-indicator-text,
+.app-nav.collapsed .build-indicator-step {
     opacity: 0;
 }
 .app-nav.collapsed .build-indicator {
     justify-content: center;
     padding: 8px;
     margin: 0 8px 4px;
-}
-.build-indicator-bar {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    height: 2px;
-    background: var(--accent-sage);
-    border-radius: 1px;
-    transition: width 0.4s var(--ease-gentle);
-}
-.build-indicator.done .build-indicator-bar {
-    width: 100% !important;
-    background: var(--accent-sage);
-}
-.build-indicator.error .build-indicator-bar {
-    background: var(--accent-warm);
 }
 
 /* ============================================================================
@@ -2053,84 +2032,42 @@ a {
 .home-build-card.active {
     display: block;
 }
-.home-build-header {
+.home-build-status {
     display: flex;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 14px;
+    gap: 12px;
 }
-.home-build-header i {
-    font-size: 16px;
-    color: var(--accent-sage);
-}
-.home-build-header h3 {
-    font-family: var(--font-serif);
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--text-primary);
-    margin: 0;
-}
-.home-build-progress-bar {
-    width: 100%;
-    height: 6px;
-    background: var(--surface-warm);
-    border-radius: 3px;
-    overflow: hidden;
-    margin-bottom: 10px;
-}
-.home-build-progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--accent-sage), var(--accent-sage-soft));
-    border-radius: 3px;
-    transition: width 0.4s var(--ease-gentle);
-    width: 0%;
-}
-.home-build-card.done .home-build-progress-fill {
-    width: 100%;
-    background: var(--accent-sage);
-}
-.home-build-card.error .home-build-progress-fill {
-    background: var(--accent-warm);
-}
-.home-build-message {
-    font-family: var(--font-sans);
-    font-size: 13px;
-    color: var(--text-secondary);
-    line-height: 1.5;
-}
-.home-build-stages {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 10px;
-}
-.home-build-stage {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-family: var(--font-sans);
-    font-size: 12px;
-    color: var(--text-tertiary);
-}
-.home-build-stage.active {
-    color: var(--text-secondary);
-}
-.home-build-stage.done {
-    color: var(--accent-sage);
-}
-.home-build-stage-dot {
-    width: 6px;
-    height: 6px;
-    min-width: 6px;
+.home-build-dot {
+    width: 10px;
+    height: 10px;
+    min-width: 10px;
     border-radius: var(--radius-full);
-    background: var(--border-medium);
-}
-.home-build-stage.active .home-build-stage-dot {
     background: var(--accent-sage);
     animation: buildPulse 1.5s ease-in-out infinite;
 }
-.home-build-stage.done .home-build-stage-dot {
+.home-build-card.done .home-build-dot {
+    animation: none;
     background: var(--accent-sage);
+}
+.home-build-card.error .home-build-dot {
+    animation: none;
+    background: var(--accent-warm);
+}
+.home-build-text {
+    flex: 1;
+    min-width: 0;
+}
+.home-build-message {
+    font-family: var(--font-sans);
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+.home-build-step {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-tertiary);
+    white-space: nowrap;
 }
     </style>
 </head>
@@ -2208,7 +2145,7 @@ a {
         <div class="build-indicator" id="buildIndicator">
             <span class="build-indicator-dot"></span>
             <span class="build-indicator-text" id="buildIndicatorText">Syncing emails...</span>
-            <div class="build-indicator-bar" id="buildIndicatorBar" style="width:0%"></div>
+            <span class="build-indicator-step" id="buildIndicatorStep"></span>
         </div>
 
         <!-- Footer -->
@@ -2270,15 +2207,13 @@ a {
 
             <!-- Auto-build progress (shown during background email processing) -->
             <div class="home-build-card" id="homeBuildCard">
-                <div class="home-build-header">
-                    <i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i>
-                    <h3>Syncing Your Emails</h3>
+                <div class="home-build-status">
+                    <span class="home-build-dot"></span>
+                    <div class="home-build-text">
+                        <div class="home-build-message" id="homeBuildMessage">Starting...</div>
+                    </div>
+                    <span class="home-build-step" id="homeBuildStep"></span>
                 </div>
-                <div class="home-build-progress-bar">
-                    <div class="home-build-progress-fill" id="homeBuildFill"></div>
-                </div>
-                <div class="home-build-message" id="homeBuildMessage">Starting...</div>
-                <div class="home-build-stages" id="homeBuildStages"></div>
             </div>
 
             <div class="page-card">
@@ -2403,8 +2338,9 @@ a {
                     Build Memory
                 </button>
                 <div class="build-progress" id="buildProgress" style="display:none">
-                    <div class="progress-stages" id="progressStages"></div>
+                    <span class="progress-dot"></span>
                     <div class="progress-message" id="progressMessage"></div>
+                    <span class="progress-step" id="progressStep"></span>
                 </div>
             </div>
 
@@ -2717,98 +2653,52 @@ a {
         // ── UI elements ──
         var indicator = document.getElementById('buildIndicator');
         var indicatorText = document.getElementById('buildIndicatorText');
-        var indicatorBar = document.getElementById('buildIndicatorBar');
+        var indicatorStep = document.getElementById('buildIndicatorStep');
         var homeCard = document.getElementById('homeBuildCard');
-        var homeFill = document.getElementById('homeBuildFill');
         var homeMsg = document.getElementById('homeBuildMessage');
-        var homeStages = document.getElementById('homeBuildStages');
+        var homeStep = document.getElementById('homeBuildStep');
 
         // Show both indicators
         if (indicator) indicator.classList.add('active');
         if (homeCard) homeCard.classList.add('active');
 
-        // Track stages for progress bar estimation
+        // Track stages for step ratio
         var stageOrder = ['fetching', 'email_reader', 'memory_writer'];
-        var stageLabels = { fetching: 'Fetching emails', email_reader: 'Analyzing emails', memory_writer: 'Writing memories' };
-        var currentStageIdx = 0;
-        var homeStageMap = {};
+        var totalSteps = stageOrder.length;
+        var currentStepNum = 0;
 
-        function updateProgress(event) {
-            var msg = event.message || event.stage || '';
-
-            // Update sidebar indicator text
-            if (indicatorText) indicatorText.textContent = msg;
-
-            // Update home card message
-            if (homeMsg) homeMsg.textContent = msg;
-
-            // Track stage progression
-            var stageKey = event.stage;
+        function updateStepRatio(stageKey, status) {
             var stageIdx = stageOrder.indexOf(stageKey);
-
             if (stageIdx >= 0) {
-                currentStageIdx = stageIdx;
-
-                // Create stage element if new
-                if (!homeStageMap[stageKey] && homeStages) {
-                    var stageEl = document.createElement('div');
-                    stageEl.className = 'home-build-stage active';
-                    var dot = document.createElement('span');
-                    dot.className = 'home-build-stage-dot';
-                    stageEl.appendChild(dot);
-                    var label = document.createElement('span');
-                    label.textContent = msg;
-                    stageEl.appendChild(label);
-                    homeStages.appendChild(stageEl);
-                    homeStageMap[stageKey] = stageEl;
-
-                    // Mark previous stages as done
-                    for (var i = 0; i < stageIdx; i++) {
-                        var prevKey = stageOrder[i];
-                        if (homeStageMap[prevKey]) {
-                            homeStageMap[prevKey].className = 'home-build-stage done';
-                        }
-                    }
-                } else if (homeStageMap[stageKey]) {
-                    // Update existing stage text
-                    var spans = homeStageMap[stageKey].querySelectorAll('span:not(.home-build-stage-dot)');
-                    if (spans.length > 0) spans[0].textContent = msg;
-                }
-
-                // Mark completed stages
-                if (event.status === 'complete') {
-                    if (homeStageMap[stageKey]) {
-                        homeStageMap[stageKey].className = 'home-build-stage done';
-                    }
-                }
+                currentStepNum = status === 'complete' ? stageIdx + 1 : stageIdx + 1;
             }
-
-            // Estimate progress percentage
-            var pct = 0;
-            if (currentStageIdx === 0) pct = event.status === 'complete' ? 20 : 10;
-            else if (currentStageIdx === 1) pct = event.status === 'complete' ? 70 : 30 + (currentStageIdx * 10);
-            else if (currentStageIdx === 2) pct = event.status === 'complete' ? 95 : 80;
-
-            if (homeFill) homeFill.style.width = pct + '%';
-            if (indicatorBar) indicatorBar.style.width = pct + '%';
+            var ratio = currentStepNum + '/' + totalSteps;
+            if (indicatorStep) indicatorStep.textContent = ratio;
+            if (homeStep) homeStep.textContent = ratio;
         }
 
         source.onmessage = function(e) {
             var event = JSON.parse(e.data);
-            updateProgress(event);
+            var msg = event.message || event.stage || '';
+
+            // Update text
+            if (indicatorText) indicatorText.textContent = msg;
+            if (homeMsg) homeMsg.textContent = msg;
+
+            // Update step ratio
+            if (event.stage && event.stage !== 'complete' && event.stage !== 'error') {
+                updateStepRatio(event.stage, event.status);
+            }
 
             if (event.stage === 'complete') {
                 source.close();
-                // Final state
-                if (indicator) { indicator.classList.add('done'); }
+                if (indicator) indicator.classList.add('done');
                 if (indicatorText) indicatorText.textContent = 'Sync complete';
-                if (indicatorBar) indicatorBar.style.width = '100%';
+                if (indicatorStep) indicatorStep.textContent = totalSteps + '/' + totalSteps;
                 if (homeCard) homeCard.classList.add('done');
-                if (homeFill) homeFill.style.width = '100%';
                 if (homeMsg) homeMsg.textContent = event.message || 'Done!';
-                // Refresh home stats
+                if (homeStep) homeStep.textContent = totalSteps + '/' + totalSteps;
                 loadHomeData();
-                // Fade out sidebar indicator after 5 seconds
                 setTimeout(function() {
                     if (indicator) indicator.classList.remove('active');
                 }, 5000);
@@ -2816,7 +2706,7 @@ a {
 
             if (event.stage === 'error') {
                 source.close();
-                if (indicator) { indicator.classList.add('error'); }
+                if (indicator) indicator.classList.add('error');
                 if (indicatorText) indicatorText.textContent = 'Sync failed';
                 if (homeCard) homeCard.classList.add('error');
                 if (homeMsg) {
@@ -3839,71 +3729,52 @@ a {
         var query = document.getElementById('buildQuery').value;
         var btn = document.getElementById('buildBtn');
         var progress = document.getElementById('buildProgress');
-        var stages = document.getElementById('progressStages');
         var message = document.getElementById('progressMessage');
+        var stepEl = document.getElementById('progressStep');
 
         btn.disabled = true;
-        progress.style.display = 'block';
-        stages.textContent = '';
+        progress.style.display = 'flex';
+        progress.classList.remove('done', 'error');
         message.textContent = 'Starting pipeline...';
         message.style.color = '';
+        if (stepEl) stepEl.textContent = '';
 
         var url = '/api/stream/build?days_back=' + encodeURIComponent(days) +
                   '&max_emails=' + encodeURIComponent(max) +
                   '&gmail_query=' + encodeURIComponent(query);
         var source = new EventSource(url);
 
-        var stageMap = {};
+        var stageOrder = ['fetching', 'email_reader', 'memory_writer'];
+        var totalSteps = stageOrder.length;
 
         source.onmessage = function(e) {
             var event = JSON.parse(e.data);
-
-            var stageKey = event.stage || 'unknown';
-            if (!stageMap[stageKey] && stageKey !== 'complete' && stageKey !== 'error') {
-                var stageEl = document.createElement('div');
-                stageEl.className = 'progress-stage active';
-
-                var dot = document.createElement('span');
-                dot.className = 'stage-dot';
-                stageEl.appendChild(dot);
-
-                var stageText = document.createElement('span');
-                stageText.textContent = event.message || stageKey;
-                stageEl.appendChild(stageText);
-
-                stages.appendChild(stageEl);
-                stageMap[stageKey] = stageEl;
-
-                // Mark previous stages as done
-                Object.keys(stageMap).forEach(function(k) {
-                    if (k !== stageKey && stageMap[k]) {
-                        stageMap[k].classList.remove('active');
-                        stageMap[k].classList.add('done');
-                    }
-                });
-            }
 
             if (event.message) {
                 message.textContent = event.message;
             }
 
+            // Update step ratio
+            var stageKey = event.stage || '';
+            var stageIdx = stageOrder.indexOf(stageKey);
+            if (stageIdx >= 0 && stepEl) {
+                stepEl.textContent = (stageIdx + 1) + '/' + totalSteps;
+            }
+
             if (event.stage === 'complete') {
                 source.close();
                 btn.disabled = false;
+                progress.classList.add('done');
                 var total = (event.stats && event.stats.total) || 0;
                 message.textContent = 'Done! ' + total + ' memories processed.';
-                Object.keys(stageMap).forEach(function(k) {
-                    if (stageMap[k]) {
-                        stageMap[k].classList.remove('active');
-                        stageMap[k].classList.add('done');
-                    }
-                });
+                if (stepEl) stepEl.textContent = totalSteps + '/' + totalSteps;
                 loadProfileStats();
             }
 
             if (event.stage === 'error') {
                 source.close();
                 btn.disabled = false;
+                progress.classList.add('error');
                 message.textContent = 'Error: ' + (event.message || 'Pipeline failed');
                 message.style.color = 'var(--accent-warm)';
             }
@@ -3912,6 +3783,7 @@ a {
         source.onerror = function() {
             source.close();
             btn.disabled = false;
+            progress.classList.add('error');
             message.textContent = 'Connection lost. Check server logs.';
             message.style.color = 'var(--accent-warm)';
         };
