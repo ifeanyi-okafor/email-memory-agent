@@ -1698,8 +1698,20 @@ a {
 .progress-step {
     font-family: var(--font-mono);
     font-size: 12px;
-    color: var(--text-tertiary);
+    color: var(--accent-sage-deep);
+    background: var(--accent-sage-glow);
+    padding: 3px 9px;
+    border-radius: 6px;
     white-space: nowrap;
+    letter-spacing: 0.5px;
+}
+.build-progress.done .progress-step {
+    color: var(--accent-sage);
+    background: rgba(123, 158, 135, 0.12);
+}
+.build-progress.error .progress-step {
+    color: var(--accent-warm);
+    background: rgba(196, 149, 106, 0.12);
 }
 
 /* ============================================================================
@@ -2002,9 +2014,21 @@ a {
 .build-indicator-step {
     font-family: var(--font-mono);
     font-size: 10px;
-    color: var(--text-nav);
-    opacity: 0.7;
+    color: var(--accent-sage);
+    background: rgba(123, 158, 135, 0.18);
+    padding: 2px 7px;
+    border-radius: 6px;
     white-space: nowrap;
+    letter-spacing: 0.5px;
+    line-height: 1.4;
+}
+.build-indicator.done .build-indicator-step {
+    color: var(--text-nav-active);
+    background: rgba(123, 158, 135, 0.25);
+}
+.build-indicator.error .build-indicator-step {
+    color: var(--accent-warm);
+    background: rgba(196, 149, 106, 0.18);
 }
 .app-nav.collapsed .build-indicator-text,
 .app-nav.collapsed .build-indicator-step {
@@ -2064,8 +2088,20 @@ a {
 .home-build-step {
     font-family: var(--font-mono);
     font-size: 12px;
-    color: var(--text-tertiary);
+    color: var(--accent-sage-deep);
+    background: var(--accent-sage-glow);
+    padding: 3px 9px;
+    border-radius: 6px;
     white-space: nowrap;
+    letter-spacing: 0.5px;
+}
+.home-build-card.done .home-build-step {
+    color: var(--accent-sage);
+    background: rgba(123, 158, 135, 0.12);
+}
+.home-build-card.error .home-build-step {
+    color: var(--accent-warm);
+    background: rgba(196, 149, 106, 0.12);
 }
     </style>
 </head>
