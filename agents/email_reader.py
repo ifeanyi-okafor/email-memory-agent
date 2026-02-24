@@ -80,7 +80,8 @@ WHEN YOU RECEIVE A REQUEST:
 2. Analyze the emails for patterns about the user:
    - Who do they communicate with most? (people)
    - What decisions have they made? (decisions)
-   - What commitments/promises are mentioned? (commitments)
+   - What has the user committed to or accepted? Events, webinars, promises made (commitments)
+   - What external requests need the user's action? Notices, invitations, expirations, requests (action_required)
    - Preferences, topics of interest, and communication style should be captured
      within the relevant person observation's person_data fields (NOT as standalone observations)
 
@@ -135,7 +136,8 @@ FOR "people" OBSERVATIONS ONLY — include an additional "person_data" object:
 GRANULARITY RULES (CRITICAL):
 - Create ONE observation per PERSON (not one observation for multiple people)
 - Create ONE observation per DECISION (not one observation summarizing multiple decisions)
-- Create ONE observation per COMMITMENT/PROMISE (each deadline, follow-up, or promise = separate observation)
+- Create ONE observation per COMMITMENT (each event, acceptance, or promise the user made = separate observation)
+- Create ONE observation per ACTION_REQUIRED (each external request, notice, or pending item = separate observation)
 - DO NOT create standalone "preferences", "topics", or "communication_style" observations.
   Instead, fold this information into the relevant person's person_data:
   * User's preferences → "Me" person observation's person_data (communication_preferences, scheduling_preferences, working_style)
@@ -193,7 +195,8 @@ TOKEN OPTIMIZATION:
 TITLE FORMAT RULES:
 - For "people": MUST be "FirstName LastName — Role/Relationship" (e.g., "Oji Udezue — Business Partner")
   NOT "Relationship with Person" or "Person is a..."
-- For "commitments": Brief action + deadline (e.g., "Review PR #247 by Friday")
+- For "commitments": Something the user accepted/agreed to + when (e.g., "Austin Meetup Moderation — Feb 21")
+- For "action_required": External request needing action (e.g., "Renew AWS certification by March 15")
 - For "decisions": What was decided (e.g., "Chose React over Vue for frontend")
 
 REQUIRED DATA FIELDS:
@@ -203,6 +206,7 @@ REQUIRED DATA FIELDS:
   * Note topics of interest from email subjects and content
   * Capture relationship context (how user knows this person)
 - For "commitments" observations: MUST include date, time, and venue/location if mentioned
+- For "action_required" observations: MUST include deadline (if any), who is requesting, and what action is needed
 - For all observations: Include specific evidence from emails
 
 EXAMPLES:
@@ -214,17 +218,22 @@ If emails mention Alice (alice@acme.com), Bob (bob@eng.io), and Carol:
   { "type": "people", "title": "Bob Jones — Engineer", "content": "Senior engineer at Eng.io. Code review partner.", "priority": "🟡", "person_data": { "role": "Senior Engineer", "organization": "Eng.io", "email": "bob@eng.io", "topics_of_interest": ["Rust"], ... }, ... }
   { "type": "people", "title": "Carol Lee — PM", "content": "PM for Q1 launch. Detail-oriented.", "priority": "🟡", "person_data": { "role": "PM", "scheduling_preferences": "Weekly syncs Mondays 10am", "working_style": "Detail-oriented", ... }, ... }
 
-If emails mention multiple commitments:
-  { "type": "commitments", "title": "Review PR #247 by Friday", "content": "Promised Bob to review authentication PR by Feb 20, 2026 at 5pm. Remote review.", "priority": "🔴", ... }
-  { "type": "commitments", "title": "Austin Meetup Moderation", "content": "Moderating Austin Coding Meetup on February 21, 2026 at 7pm at Capital Factory.", "priority": "🔴", ... }
+If emails mention commitments (things the user accepted/agreed to do):
+  { "type": "commitments", "title": "Austin Meetup Moderation — Feb 21", "content": "Accepted invitation to moderate Austin Coding Meetup on February 21, 2026 at 7pm at Capital Factory.", "priority": "🔴", ... }
+  { "type": "commitments", "title": "Webinar Presentation — March 5", "content": "Agreed to present at internal AI Tools webinar. Registered and confirmed.", "priority": "🟡", ... }
+
+If emails mention things requiring action (external requests the user hasn't acted on yet):
+  { "type": "action_required", "title": "Review PR #247 by Friday", "content": "Bob requested review of authentication PR by Feb 20, 2026. Not yet addressed.", "priority": "🔴", ... }
+  { "type": "action_required", "title": "Renew AWS certification by March 15", "content": "AWS sent expiration notice. Certification expires March 15, 2026.", "priority": "🟡", ... }
 
 IMPORTANT RULES:
 - Extract AT LEAST 3 observations per batch of emails (create MORE if distinct entities found)
 - Every observation must have evidence (which emails support it)
-- Use ONLY these types: decisions, people, commitments
+- Use ONLY these types: decisions, people, commitments, action_required
 - Be specific — "prefers morning meetings" not "has meeting preferences"
 - For people: Title = "Name — Role", include email address, role/relationship
 - For commitments: Include date, time, venue/location when available
+- For action_required: Include deadline, requester, and specific action needed
 - Capture preferences, topics, and communication style WITHIN person_data fields on person observations
   (e.g., user's preferences go on the "Me" observation; a contact's style goes on their person observation)
 - CRITICAL: If a decision/commitment mentions people, create SEPARATE person observations for each person mentioned

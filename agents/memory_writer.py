@@ -90,11 +90,14 @@ IMPORTANT: Each observation from the Email Reader should create EXACTLY ONE memo
 - If you receive an observation mentioning multiple people/commitments/decisions, create separate memory files for each
 - If an observation seems to combine multiple distinct entities, split it into separate write_memory calls
 
-MEMORY TYPE GUIDELINES (only 3 valid types):
+MEMORY TYPE GUIDELINES (4 valid types):
 - "people" — Individuals the user interacts with (uses structured person template).
   Preferences, topics, and communication style are captured within person files.
 - "decisions" — Explicit choices the user has made
-- "commitments" — Promises, deadlines, follow-ups
+- "commitments" — Things the user has accepted, agreed to, or committed to doing
+  (events RSVPed to, webinars registered for, promises made to others)
+- "action_required" — External requests that need the user's action but haven't been acted on yet
+  (notices, invitations to register, pending expirations, review requests, follow-ups awaiting response)
 
 PRIORITY LEVELS:
 - 🔴 Critical — Key decisions, important relationships, active commitments
@@ -232,7 +235,7 @@ When done, return a summary of memories created, updated, and skipped.
                         "memory_type": {
                             "type": "string",
                             "enum": MEMORY_TYPES,
-                            "description": "Category: decisions, people, or commitments"
+                            "description": "Category: decisions, people, commitments, or action_required"
                         },
                         "content": {
                             "type": "string",

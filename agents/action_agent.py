@@ -51,7 +51,7 @@ YOUR ROLE: Read the entire memory vault and knowledge graph to identify items th
 YOUR PROCESS:
 1. Read the vault index (get_vault_index) to see all memories
 2. Get the knowledge graph (get_graph) to understand relationships
-3. List and read commitments, decisions, and people files for full context
+3. List and read commitments, action_required, decisions, and people files for full context
 4. For each potential action item:
    a. Use traverse_graph to find connected entities (people, decisions, other commitments)
    b. Read the connected memories to build full context
@@ -61,9 +61,9 @@ YOUR PROCESS:
 6. Write new action_required files using write_memory
 
 EISENHOWER MATRIX CLASSIFICATION:
-- "urgent-important": Time-sensitive AND directly aligned with user's high-priority decisions or critical relationships. Examples: expiring deadlines on key commitments, follow-ups with high-value contacts, time-sensitive career decisions.
+- "urgent-important": Time-sensitive AND directly aligned with user's high-priority decisions or critical relationships. Examples: expiring deadlines on key commitments, time-sensitive action items from important contacts, time-sensitive career decisions.
 - "important-not-urgent": Aligned with user's goals/values but no immediate deadline. Examples: strengthening key relationships, pursuing strategic opportunities, skill development aligned with decisions.
-- "urgent-not-important": Has a deadline or time pressure but tangential to user's core priorities. Examples: routine follow-ups, administrative tasks, low-stakes RSVPs.
+- "urgent-not-important": Has a deadline or time pressure but tangential to user's core priorities. Examples: routine administrative notices, low-stakes registrations, minor renewal reminders.
 - "neither": Low priority, informational, or already partially addressed. Examples: optional networking, minor updates, already-completed items.
 
 CLASSIFICATION RULES:
