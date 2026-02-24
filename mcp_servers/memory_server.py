@@ -39,6 +39,7 @@ from memory.vault import (
     get_vault_stats,   # Gets counts per memory type
     MEMORY_TYPES       # The list of valid memory categories
 )
+from memory.graph import get_graph, traverse_graph, rebuild_graph
 
 # Create the MCP server with a descriptive name
 server = Server("memory-vault-server")
@@ -119,6 +120,34 @@ async def list_tools() -> list[Tool]:
             description="Get summary statistics about the vault.",
             inputSchema={"type": "object", "properties": {}}
         ),
+
+        # Tool 7: Get the full knowledge graph
+        Tool(
+            name="get_graph",
+            description="Get the full knowledge graph — a bidirectional map of all relationships between memories. Returns nodes (all memory files) and edges (related_to, backlink, source_memory, referenced_by connections).",
+            inputSchema={"type": "object", "properties": {}}
+        ),
+
+        # Tool 8: Traverse the graph from a starting entity
+        Tool(
+            name="traverse_graph",
+            description="Find all memories connected to a starting entity within N hops. Uses BFS traversal. Entity can be a filepath (e.g., 'people/me.md') or a title (e.g., 'Jake O\\'Shea').",
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "entity": {
+                        "type": "string",
+                        "description": "Starting entity — filepath or title"
+                    },
+                    "max_depth": {
+                        "type": "integer",
+                        "description": "Maximum hops to traverse (default: 2)",
+                        "default": 2
+                    }
+                },
+                "required": ["entity"]
+            }
+        ),
     ]
 
 
@@ -162,6 +191,17 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
     elif name == "get_vault_stats":
         stats = get_vault_stats()
         return [TextContent(type="text", text=json.dumps(stats, indent=2))]
+
+    elif name == "get_graph":
+        graph = get_graph()
+        return [TextContent(type="text", text=json.dumps(graph, indent=2))]
+
+    elif name == "traverse_graph":
+        result = traverse_graph(
+            entity=arguments['entity'],
+            max_depth=arguments.get('max_depth', 2)
+        )
+        return [TextContent(type="text", text=json.dumps(result, indent=2))]
 
     raise ValueError(f"Unknown tool: {name}")
 
