@@ -17,6 +17,7 @@ graph TB
         ER[EmailReaderAgent]
         MW[MemoryWriterAgent]
         AA[ActionAgent]
+        RA[ReconciliationAgent]
         QA[QueryAgent]
     end
 
@@ -25,9 +26,13 @@ graph TB
         MS[memory_server.py]
     end
 
+    subgraph "External LLM APIs"
+        OR[OpenRouter API — primary]
+        Claude[Anthropic Claude API — fallback]
+    end
+
     subgraph External
         Gmail[Gmail API]
-        Claude[Anthropic Claude API]
     end
 
     subgraph Storage
@@ -42,15 +47,24 @@ graph TB
     Router --> ER
     Router --> MW
     Router --> AA
+    Router --> RA
     Router --> QA
     ER --> GS
-    ER --> Claude
+    ER --> OR
+    ER -.->|fallback| Claude
     MW --> MS
-    MW --> Claude
+    MW --> OR
+    MW -.->|fallback| Claude
     AA --> MS
-    AA --> Claude
+    AA --> OR
+    AA -.->|fallback| Claude
+    RA --> MS
+    RA --> GS
+    RA --> OR
+    RA -.->|fallback| Claude
     QA --> MS
-    QA --> Claude
+    QA --> OR
+    QA -.->|fallback| Claude
     GS --> Gmail
     MS --> Vault
     MS --> Graph
@@ -70,7 +84,8 @@ graph TB
 | Memory Writer | `agents/memory_writer.py` | Creates structured vault files via Claude |
 | Query Agent | `agents/query_agent.py` | Searches vault + answers questions via Claude |
 | Action Agent | `agents/action_agent.py` | Scans vault + graph, creates Eisenhower-prioritized action items |
-| Base Agent | `agents/base_agent.py` | Agentic loop, tool-call handling |
+| Reconciliation Agent | `agents/reconciliation_agent.py` | Compares action items vs sent emails, updates status (active/closed/expired) |
+| Base Agent | `agents/base_agent.py` | Agentic loop, tool-call handling, LLM provider adapter |
 | Gmail MCP | `mcp_servers/gmail_server.py` | Exposes Gmail API as MCP tools |
 | Memory MCP | `mcp_servers/memory_server.py` | Exposes vault read/write as MCP tools |
 | Vault helpers | `memory/vault.py` | Init, search, stats, read/write, processed ID tracking |
@@ -85,4 +100,5 @@ graph TB
 - **File-based vault** — YAML frontmatter + markdown body + wiki-links
 - **Knowledge graph** — `_graph.json` is a bidirectional adjacency map rebuilt on every `write_memory()`. Backlinks auto-injected into frontmatter.
 - **Keyword routing** — simple string matching in orchestrator (not LLM-based)
+- **Multi-provider LLM** — OpenRouter (default, Kimi K2.5) with automatic Anthropic fallback. Adapter in `base_agent.py` converts between OpenAI and Anthropic message formats.
 - **Incremental processing** — tracks processed email IDs in `_processed_emails.json`

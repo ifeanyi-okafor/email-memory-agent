@@ -51,6 +51,20 @@ related_to: ["Alice Johnson", "contract-review"]
 
 Quadrant values: `urgent-important`, `important-not-urgent`, `urgent-not-important`, `neither`
 
+### Action Required Status Fields
+
+Status tracking fields are managed by the Reconciliation Agent:
+
+```yaml
+status: active              # active | closed | expired
+status_reason: ""           # e.g., "Sent email to Jake about timeline on 2026-02-22"
+status_updated: 2026-02-23  # ISO date of last status change
+```
+
+- **active** — default when field is absent (backward-compatible)
+- **closed** — sent email matched via heuristic or LLM analysis
+- **expired** — deadline passed with no matching sent email
+
 ### File Naming
 
 Files are named with a slug derived from the title plus a short hash:

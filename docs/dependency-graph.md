@@ -16,11 +16,21 @@ flowchart TD
     orchestrator --> gmail_tools
     orchestrator --> settings[config/settings.py]
 
+    orchestrator --> action_agent[agents/action_agent.py]
+    orchestrator --> reconciliation_agent[agents/reconciliation_agent.py]
+    orchestrator --> graph[memory/graph.py]
+
     email_reader --> base_agent[agents/base_agent.py]
     memory_writer --> base_agent
     query_agent --> base_agent
+    action_agent --> base_agent
+    reconciliation_agent --> base_agent
+    reconciliation_agent --> vault
+    reconciliation_agent --> gmail_tools
 
     base_agent --> settings
+    base_agent --> openrouter["OpenRouter (openai SDK)"]
+    base_agent -.->|fallback| anthropic_api["Anthropic (anthropic SDK)"]
 
     gmail_tools --> settings
     vault --> settings
@@ -31,7 +41,7 @@ flowchart TD
 | Module Changed | Affected Components |
 |---------------|-------------------|
 | `config/settings.py` | All agents, vault, gmail_tools, orchestrator |
-| `agents/base_agent.py` | All three agents |
+| `agents/base_agent.py` | All five agents (provider adapter + retry + fallback) |
 | `memory/vault.py` | Orchestrator, web/app.py, Memory MCP server |
 | `tools/gmail_tools.py` | Orchestrator, web/app.py, Gmail MCP server |
 | `orchestrator.py` | web/app.py only |

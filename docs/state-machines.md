@@ -31,8 +31,10 @@ stateDiagram-v2
     Writing --> GraphRebuilding: Memories written
     Writing --> Error: Writer failed
     GraphRebuilding --> ActionScanning: Graph rebuilt
-    ActionScanning --> Complete: Action items generated
+    ActionScanning --> Reconciling: Action items generated
     ActionScanning --> Error: Action agent failed
+    Reconciling --> Complete: Statuses updated
+    Reconciling --> Error: Reconciliation failed
     Complete --> Idle: Reset
     Error --> Idle: Reset
 ```

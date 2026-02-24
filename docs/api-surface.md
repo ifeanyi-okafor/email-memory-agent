@@ -22,7 +22,7 @@ All endpoints served by FastAPI on `http://localhost:8000`.
 
 SSE event shape (build):
 ```json
-{"stage": "fetching|email_reader|memory_writer|graph_rebuild|action_agent|complete|error", "status": "started|in_progress|complete|error", "message": "...", "stats": {...}}
+{"stage": "fetching|email_reader|memory_writer|graph_rebuild|action_agent|reconciliation|complete|error", "status": "started|in_progress|complete|error", "message": "...", "stats": {...}}
 ```
 
 SSE event shape (refresh):

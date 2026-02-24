@@ -36,6 +36,11 @@ flowchart LR
         GR --> AA[Action Agent]
         AA -->|Claude API + vault + graph| Actions[action_required/ files]
     end
+
+    subgraph "Step 8: Reconcile"
+        Actions --> RA[Reconciliation Agent]
+        RA -->|heuristic + LLM + sent emails| StatusUpdates[Update status fields]
+    end
 ```
 
 ### Batch processing detail
@@ -50,7 +55,26 @@ flowchart LR
 ### Progress events (SSE)
 
 Each pipeline stage emits progress events via callback to queue to SSE:
-- `fetching` → `email_reader` (per batch) → `memory_writer` → `graph_rebuild` → `action_agent` → `complete`
+- `fetching` → `email_reader` (per batch) → `memory_writer` → `graph_rebuild` → `action_agent` → `reconciliation` → `complete`
+
+## Reconciliation Pipeline
+
+```mermaid
+flowchart LR
+    Trigger["Build Step 5 or 'reconcile' command"] --> RA[Reconciliation Agent]
+    RA -->|list_memories| Active[Active action items]
+    RA -->|fetch_sent_emails| Sent[Sent emails last 30 days]
+    Active --> Match{Heuristic match?}
+    Sent --> Match
+    Match -->|Yes| Closed[Status → closed]
+    Match -->|No| LLM{LLM analysis}
+    LLM -->|Addressed| Closed
+    LLM -->|Not addressed| Expiry{Deadline passed?}
+    Expiry -->|Yes| Expired[Status → expired]
+    Expiry -->|No| Stays[Status → active]
+```
+
+Hybrid matching: heuristic subject/recipient overlap first (fast, free), then LLM for ambiguous items (accurate, costs API). Deadline expiry checked independently.
 
 ## Refresh Pipeline (Action Agent — Standalone)
 

@@ -41,8 +41,11 @@ Improve agent intelligence, vault quality, and add new memory types.
 - [x] 3.3 Bidirectional knowledge graph (`_graph.json`) with wiki-link resolution
 - [x] 3.4 New memory type: `action_required` with Eisenhower matrix prioritization
 - [x] 3.5 Action Agent — scans vault + graph, generates prioritized action items
-- [ ] 3.6 Memory confidence scoring and source attribution
-- [ ] 3.7 Query Agent context window optimization
+- [x] 3.6 Multi-provider LLM support (OpenRouter primary, Anthropic fallback)
+- [x] 3.7 Action Required vault tab with status badges and filter toggles
+- [x] 3.8 Reconciliation Agent (compare action items vs sent emails → Active/Closed/Expired)
+- [ ] 3.9 Memory confidence scoring and source attribution
+- [ ] 3.10 Query Agent context window optimization
 
 ## Phase 4: Polish & Deployment
 Production hardening, performance, and deployment.

@@ -30,6 +30,9 @@ sequenceDiagram
     Pipeline Thread->>Queue: {stage: action_agent, status: started}
     Queue->>Browser: data: {...}
 
+    Pipeline Thread->>Queue: {stage: reconciliation, status: started}
+    Queue->>Browser: data: {...}
+
     Pipeline Thread->>Queue: {stage: complete, status: complete, stats: {...}}
     Queue->>Browser: data: {...}
 
@@ -41,7 +44,7 @@ sequenceDiagram
 
 ```json
 {
-  "stage": "fetching | email_reader | memory_writer | graph_rebuild | action_agent | complete | error",
+  "stage": "fetching | email_reader | memory_writer | graph_rebuild | action_agent | reconciliation | complete | error",
   "status": "started | in_progress | complete | error",
   "message": "Human-readable progress text",
   "stats": {"total": 15, "decisions": 3, "people": 5, "commitments": 7}
