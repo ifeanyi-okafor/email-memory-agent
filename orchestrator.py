@@ -43,12 +43,14 @@ from rich.panel import Panel
 from agents.email_reader import EmailReaderAgent
 from agents.memory_writer import MemoryWriterAgent
 from agents.query_agent import QueryAgent
+from agents.action_agent import ActionAgent
 
 # Import vault helper functions
 from memory.vault import (
     initialize_vault, get_vault_stats,
     get_processed_email_ids, save_processed_email_ids
 )
+from memory.graph import rebuild_graph
 
 # Import Gmail fetch function (for direct batched fetching)
 from tools.gmail_tools import fetch_emails
@@ -87,6 +89,7 @@ class Orchestrator:
         self.email_reader = EmailReaderAgent()    # Agent 1: fetches emails
         self.memory_writer = MemoryWriterAgent()  # Agent 2: writes memories
         self.query_agent = QueryAgent()           # Agent 3: answers questions
+        self.action_agent = ActionAgent()      # Agent 4: generates action items
 
     def route(self, user_input: str) -> str:
         """
@@ -119,6 +122,13 @@ class Orchestrator:
             'process email', 'analyze email', 'ingest'
         ]):
             return self.build_memory(user_input)
+
+        # ── Check for "refresh actions" intent ───────────────
+        elif any(kw in user_lower for kw in [
+            'refresh', 'prioritize', 'actions', 'action items',
+            'what needs attention', 'what should i do', 'priorities'
+        ]):
+            return self.refresh_actions(user_input)
 
         # ── Check for "stats" intent ───────────────────────────
         elif any(kw in user_lower for kw in [
@@ -173,13 +183,15 @@ class Orchestrator:
             "[bold]Starting memory build pipeline...[/bold]\n"
             f"   Step 1: Fetch up to {max_emails} emails from last {days_back} days\n"
             f"   Step 2: Analyze in batches of {EMAIL_BATCH_SIZE}\n"
-            "   Step 3: Memory Writer -- Create memory files",
+            "   Step 3: Memory Writer -- Create memory files\n"
+            "   Step 3.5: Rebuild knowledge graph\n"
+            "   Step 4: Action Agent -- Generate prioritized action items",
             title="Pipeline",
             border_style="blue"
         ))
 
         # ── Step 1: Fetch all emails ─────────────────────────
-        console.print("\n[bold cyan]Step 1/3: Fetching emails[/bold cyan]")
+        console.print("\n[bold cyan]Step 1/4: Fetching emails[/bold cyan]")
         emit({
             "stage": "fetching", "status": "started",
             "message": f"Fetching up to {max_emails} emails from last {days_back} days..."
@@ -221,7 +233,7 @@ class Orchestrator:
         total_batches = math.ceil(len(emails) / EMAIL_BATCH_SIZE)
         all_observations = []
 
-        console.print(f"\n[bold cyan]Step 2/3: Analyzing in {total_batches} batch(es)[/bold cyan]")
+        console.print(f"\n[bold cyan]Step 2/4: Analyzing in {total_batches} batch(es)[/bold cyan]")
         emit({
             "stage": "email_reader", "status": "started",
             "message": f"Analyzing {len(emails)} emails in {total_batches} batch(es)..."
@@ -295,7 +307,7 @@ class Orchestrator:
             return error_msg
 
         # ── Step 3: Memory Writer ────────────────────────────
-        console.print("\n[bold cyan]Step 3/3: Memory Writer Agent[/bold cyan]")
+        console.print("\n[bold cyan]Step 3/4: Memory Writer Agent[/bold cyan]")
         emit({
             "stage": "memory_writer", "status": "started",
             "message": "Memory Writer Agent is creating vault files..."
@@ -331,6 +343,26 @@ class Orchestrator:
         new_ids = processed_ids | {e['id'] for e in emails}
         save_processed_email_ids(new_ids)
 
+        # ── Step 3.5: Rebuild knowledge graph ──────────────────
+        console.print("\n[bold cyan]Step 3.5/4: Rebuilding knowledge graph[/bold cyan]")
+        emit({
+            "stage": "graph_rebuild", "status": "started",
+            "message": "Rebuilding knowledge graph with new memories..."
+        })
+        graph = rebuild_graph()
+        console.print(f"[green]OK - Graph rebuilt: {len(graph['nodes'])} nodes, {len(graph['edges'])} edges[/green]")
+        emit({
+            "stage": "graph_rebuild", "status": "complete",
+            "message": f"Graph rebuilt: {len(graph['nodes'])} nodes, {len(graph['edges'])} edges"
+        })
+
+        # ── Step 4: Action Agent ──────────────────────────────
+        console.print("\n[bold cyan]Step 4/4: Action Agent[/bold cyan]")
+        action_result = self.refresh_actions(
+            "Generate action items from the newly updated vault.",
+            progress_callback=progress_callback
+        )
+
         # ── Build summary ────────────────────────────────────
         stats = get_vault_stats()
 
@@ -344,6 +376,63 @@ class Orchestrator:
               "message": writer_result, "stats": stats})
 
         return summary
+
+    def refresh_actions(self, user_input: str, progress_callback=None) -> str:
+        """
+        Run the Action Agent to scan the full vault and generate/update
+        action items with Eisenhower classification.
+
+        This can be triggered standalone ("refresh actions") or as the
+        final step of the build pipeline.
+
+        Args:
+            user_input:        The user's request.
+            progress_callback: Optional function(dict) for SSE progress events.
+
+        Returns:
+            str: Summary of action items created/updated.
+        """
+        def emit(event):
+            if progress_callback:
+                progress_callback(event)
+
+        console.print("\n[bold cyan]Action Agent[/bold cyan] scanning vault for action items...\n")
+        emit({
+            "stage": "action_agent", "status": "started",
+            "message": "Scanning vault and graph for action items..."
+        })
+
+        # Reset agent for fresh context
+        self.action_agent.reset()
+
+        # Set up retry callback
+        def on_action_retry(attempt, max_retries, delay):
+            emit({
+                "stage": "action_agent", "status": "in_progress",
+                "message": f"API overloaded — retrying in {delay:.0f}s (attempt {attempt}/{max_retries})..."
+            })
+        self.action_agent.on_retry = on_action_retry
+
+        from datetime import datetime
+        today = datetime.now().strftime('%Y-%m-%d')
+
+        prompt = (
+            "Scan the entire memory vault and knowledge graph. "
+            "Identify all items that require the user's attention. "
+            "Create action_required memory files with Eisenhower matrix "
+            "classification and justification based on the full vault context. "
+            f"Today's date is {today}."
+        )
+
+        result = self.action_agent.run(prompt, max_tool_rounds=15)
+
+        console.print("[green]OK - Action Agent complete[/green]\n")
+        emit({
+            "stage": "action_agent", "status": "complete",
+            "message": "Action items generated"
+        })
+
+        return result
 
     def query_memory(self, user_input: str) -> str:
         """
