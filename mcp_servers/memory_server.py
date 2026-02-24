@@ -75,6 +75,9 @@ async def list_tools() -> list[Tool]:
                     "deadline": {"type": "string"},
                     "source_type": {"type": "string"},
                     "source_memories": {"type": "array", "items": {"type": "string"}},
+                    "status": {"type": "string", "enum": ["active", "closed", "expired"], "default": "active"},
+                    "status_reason": {"type": "string"},
+                    "status_updated": {"type": "string"},
                 },
                 "required": ["title", "memory_type", "content"]
             }
@@ -180,6 +183,9 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             deadline=arguments.get('deadline'),
             source_type=arguments.get('source_type'),
             source_memories=arguments.get('source_memories'),
+            status=arguments.get('status'),
+            status_reason=arguments.get('status_reason'),
+            status_updated=arguments.get('status_updated'),
         )
         return [TextContent(type="text", text=f"Memory written to: {filepath}")]
 
