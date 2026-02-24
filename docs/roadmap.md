@@ -38,10 +38,11 @@ Improve agent intelligence, vault quality, and add new memory types.
 
 - [ ] 3.1 LLM-based intent classification (replace keyword routing)
 - [ ] 3.2 Memory deduplication and merging within vault
-- [ ] 3.3 Relationship graph between people memories
-- [ ] 3.4 New memory types: projects, events, preferences
-- [ ] 3.5 Memory confidence scoring and source attribution
-- [ ] 3.6 Query Agent context window optimization
+- [x] 3.3 Bidirectional knowledge graph (`_graph.json`) with wiki-link resolution
+- [x] 3.4 New memory type: `action_required` with Eisenhower matrix prioritization
+- [x] 3.5 Action Agent — scans vault + graph, generates prioritized action items
+- [ ] 3.6 Memory confidence scoring and source attribution
+- [ ] 3.7 Query Agent context window optimization
 
 ## Phase 4: Polish & Deployment
 Production hardening, performance, and deployment.

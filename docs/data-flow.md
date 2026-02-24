@@ -27,6 +27,15 @@ flowchart LR
     subgraph "Step 5: Track"
         Vault --> IDs[Save processed IDs]
     end
+
+    subgraph "Step 6: Graph"
+        IDs --> GR[Rebuild _graph.json]
+    end
+
+    subgraph "Step 7: Actions"
+        GR --> AA[Action Agent]
+        AA -->|Claude API + vault + graph| Actions[action_required/ files]
+    end
 ```
 
 ### Batch processing detail
@@ -41,7 +50,19 @@ flowchart LR
 ### Progress events (SSE)
 
 Each pipeline stage emits progress events via callback to queue to SSE:
-- `fetching` then `email_reader` (per batch) then `memory_writer` then `complete`
+- `fetching` → `email_reader` (per batch) → `memory_writer` → `graph_rebuild` → `action_agent` → `complete`
+
+## Refresh Pipeline (Action Agent — Standalone)
+
+```mermaid
+flowchart LR
+    Trigger["User says 'refresh' / 'prioritize'"] --> AA[Action Agent]
+    AA -->|read vault + graph| Context[Full Vault Context]
+    Context --> AA
+    AA -->|Claude API| Actions[action_required/ files]
+```
+
+Triggered via `GET /api/stream/refresh` (SSE) or chat keywords. The Action Agent reads the full vault and `_graph.json`, then creates/updates Eisenhower-classified action items.
 
 ## Query Pipeline
 
@@ -50,8 +71,10 @@ flowchart LR
     User[User Question] --> QA[Query Agent]
     QA -->|search_vault tool| Search[Vault Search]
     QA -->|read_memory tool| Read[Memory Files]
+    QA -->|get_graph / traverse_graph| Graph[Knowledge Graph]
     Search --> QA
     Read --> QA
+    Graph --> QA
     QA -->|Claude API| Answer[Synthesized Answer]
 ```
 

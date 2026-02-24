@@ -28,8 +28,11 @@ stateDiagram-v2
     Analyzing --> Analyzing: Next batch
     Analyzing --> Writing: All batches done
     Analyzing --> Error: All batches failed
-    Writing --> Complete: Memories written
+    Writing --> GraphRebuilding: Memories written
     Writing --> Error: Writer failed
+    GraphRebuilding --> ActionScanning: Graph rebuilt
+    ActionScanning --> Complete: Action items generated
+    ActionScanning --> Error: Action agent failed
     Complete --> Idle: Reset
     Error --> Idle: Reset
 ```

@@ -18,10 +18,16 @@ All endpoints served by FastAPI on `http://localhost:8000`.
 | Method | Path | Auth? | Description | Request | Response |
 |--------|------|-------|-------------|---------|----------|
 | GET | `/api/stream/build` | Yes | Run email→memory pipeline | Query: `days_back`, `max_emails`, `gmail_query` | SSE stream |
+| GET | `/api/stream/refresh` | No | Run Action Agent (standalone) | — | SSE stream |
 
-SSE event shape:
+SSE event shape (build):
 ```json
-{"stage": "fetching|email_reader|memory_writer|complete|error", "status": "started|in_progress|complete|error", "message": "...", "stats": {...}}
+{"stage": "fetching|email_reader|memory_writer|graph_rebuild|action_agent|complete|error", "status": "started|in_progress|complete|error", "message": "...", "stats": {...}}
+```
+
+SSE event shape (refresh):
+```json
+{"stage": "action_agent|complete|error", "status": "started|in_progress|complete|error", "message": "..."}
 ```
 
 ### Query

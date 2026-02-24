@@ -24,6 +24,12 @@ sequenceDiagram
     Pipeline Thread->>Queue: {stage: memory_writer, status: started}
     Queue->>Browser: data: {...}
 
+    Pipeline Thread->>Queue: {stage: graph_rebuild, status: started}
+    Queue->>Browser: data: {...}
+
+    Pipeline Thread->>Queue: {stage: action_agent, status: started}
+    Queue->>Browser: data: {...}
+
     Pipeline Thread->>Queue: {stage: complete, status: complete, stats: {...}}
     Queue->>Browser: data: {...}
 
@@ -35,7 +41,7 @@ sequenceDiagram
 
 ```json
 {
-  "stage": "fetching | email_reader | memory_writer | complete | error",
+  "stage": "fetching | email_reader | memory_writer | graph_rebuild | action_agent | complete | error",
   "status": "started | in_progress | complete | error",
   "message": "Human-readable progress text",
   "stats": {"total": 15, "decisions": 3, "people": 5, "commitments": 7}
@@ -61,3 +67,31 @@ Two UI elements consume SSE events simultaneously:
 2. **Home page build card** (`#homeBuildCard`) — full progress bar + stage list
 
 Both are driven by the `updateProgress()` function inside `startIncrementalBuild()`.
+
+## SSE — Refresh Pipeline (Action Agent)
+
+Standalone action refresh via `GET /api/stream/refresh`. Same SSE pattern (queue + thread + async generator).
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant FastAPI
+    participant Queue
+    participant Refresh Thread
+
+    Browser->>FastAPI: GET /api/stream/refresh
+    FastAPI->>Refresh Thread: Start in background
+    FastAPI->>Browser: SSE connection opened
+
+    Refresh Thread->>Queue: {stage: action_agent, status: started}
+    Queue->>Browser: data: {...}
+
+    Refresh Thread->>Queue: {stage: action_agent, status: in_progress, message: "Scanning vault..."}
+    Queue->>Browser: data: {...}
+
+    Refresh Thread->>Queue: {stage: complete, status: complete}
+    Queue->>Browser: data: {...}
+
+    Refresh Thread->>Queue: None (sentinel)
+    FastAPI->>Browser: Connection closed
+```
