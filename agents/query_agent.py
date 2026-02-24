@@ -34,6 +34,7 @@ from memory.vault import (
     search_vault, read_memory, list_memories,
     get_vault_index, get_vault_stats, MEMORY_TYPES
 )
+from memory.graph import get_graph, traverse_graph
 
 
 # ── THE QUERY AGENT CLASS ─────────────────────────────────────────────
@@ -63,7 +64,9 @@ class QueryAgent(BaseAgent):
         self.system_prompt = """You are the Query Agent — the conversational interface to a memory vault.
 
 The memory vault contains structured memories about a person, extracted from their emails.
-Memories are organized by type: decisions, people, commitments.
+Memories are organized by type: decisions, people, commitments, action_required.
+Action items are classified by Eisenhower matrix (urgent-important, important-not-urgent, urgent-not-important, neither).
+The vault has a knowledge graph (_graph.json) that maps bidirectional relationships between all memories.
 Preferences, topics of interest, and communication style are captured within person files.
 
 YOUR ROLE: Answer questions about the person using their memory vault.
@@ -73,6 +76,7 @@ YOUR PROCESS:
 2. Search for relevant memories using search_vault
 3. Read specific memories using read_memory for detailed answers
 4. Synthesize a natural, conversational answer
+5. Use get_graph or traverse_graph to explore connections between memories
 
 RESPONSE STYLE:
 - Speak about the user in second person: "You tend to prefer..."
@@ -138,7 +142,31 @@ RESPONSE STYLE:
                 "name": "get_vault_stats",
                 "description": "Get summary counts — how many memories exist in each category.",
                 "input_schema": {"type": "object", "properties": {}}
-            }
+            },
+            {
+                "name": "get_graph",
+                "description": "Get the full knowledge graph showing all relationships between memories. Returns nodes (files) and edges (connections like related_to, backlink, source_memory).",
+                "input_schema": {"type": "object", "properties": {}}
+            },
+            {
+                "name": "traverse_graph",
+                "description": "Find all memories connected to a starting entity within N hops. BFS traversal. Entity can be a filepath or title.",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "entity": {
+                            "type": "string",
+                            "description": "Starting entity — filepath (e.g., 'people/me.md') or title (e.g., 'Jake O\\'Shea')"
+                        },
+                        "max_depth": {
+                            "type": "integer",
+                            "description": "Max hops (default: 2)",
+                            "default": 2
+                        }
+                    },
+                    "required": ["entity"]
+                }
+            },
         ]
 
     def execute_tool(self, tool_name: str, tool_args: dict) -> str:
@@ -171,6 +199,17 @@ RESPONSE STYLE:
             # Return counts per category
             stats = get_vault_stats()
             return json.dumps(stats, indent=2)
+
+        elif tool_name == "get_graph":
+            graph = get_graph()
+            return json.dumps(graph, indent=2)
+
+        elif tool_name == "traverse_graph":
+            result = traverse_graph(
+                entity=tool_args['entity'],
+                max_depth=tool_args.get('max_depth', 2)
+            )
+            return json.dumps(result, indent=2)
 
         # Unknown tool — raise an error
         raise ValueError(f"Unknown tool: {tool_name}")
