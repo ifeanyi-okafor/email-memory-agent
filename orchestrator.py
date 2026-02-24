@@ -44,6 +44,7 @@ from agents.email_reader import EmailReaderAgent
 from agents.memory_writer import MemoryWriterAgent
 from agents.query_agent import QueryAgent
 from agents.action_agent import ActionAgent
+from agents.reconciliation_agent import ReconciliationAgent
 
 # Import vault helper functions
 from memory.vault import (
@@ -90,6 +91,7 @@ class Orchestrator:
         self.memory_writer = MemoryWriterAgent()  # Agent 2: writes memories
         self.query_agent = QueryAgent()           # Agent 3: answers questions
         self.action_agent = ActionAgent()      # Agent 4: generates action items
+        self.reconciliation_agent = ReconciliationAgent()
 
     def route(self, user_input: str) -> str:
         """
@@ -129,6 +131,13 @@ class Orchestrator:
             'what needs attention', 'what should i do', 'priorities'
         ]):
             return self.refresh_actions(user_input)
+
+        # ── Check for "reconcile" intent ─────────────────────────
+        elif any(kw in user_lower for kw in [
+            'reconcile', 'update actions', 'action status',
+            'check actions', 'reconcile actions'
+        ]):
+            return self.reconcile_actions(user_input)
 
         # ── Check for "stats" intent ───────────────────────────
         elif any(kw in user_lower for kw in [
@@ -185,13 +194,14 @@ class Orchestrator:
             f"   Step 2: Analyze in batches of {EMAIL_BATCH_SIZE}\n"
             "   Step 3: Memory Writer -- Create memory files\n"
             "   Step 3.5: Rebuild knowledge graph\n"
-            "   Step 4: Action Agent -- Generate prioritized action items",
+            "   Step 4: Action Agent -- Generate prioritized action items\n"
+            "   Step 5: Reconciliation Agent -- Update action item statuses",
             title="Pipeline",
             border_style="blue"
         ))
 
         # ── Step 1: Fetch all emails ─────────────────────────
-        console.print("\n[bold cyan]Step 1/4: Fetching emails[/bold cyan]")
+        console.print("\n[bold cyan]Step 1/5: Fetching emails[/bold cyan]")
         emit({
             "stage": "fetching", "status": "started",
             "message": f"Fetching up to {max_emails} emails from last {days_back} days..."
@@ -233,7 +243,7 @@ class Orchestrator:
         total_batches = math.ceil(len(emails) / EMAIL_BATCH_SIZE)
         all_observations = []
 
-        console.print(f"\n[bold cyan]Step 2/4: Analyzing in {total_batches} batch(es)[/bold cyan]")
+        console.print(f"\n[bold cyan]Step 2/5: Analyzing in {total_batches} batch(es)[/bold cyan]")
         emit({
             "stage": "email_reader", "status": "started",
             "message": f"Analyzing {len(emails)} emails in {total_batches} batch(es)..."
@@ -307,7 +317,7 @@ class Orchestrator:
             return error_msg
 
         # ── Step 3: Memory Writer ────────────────────────────
-        console.print("\n[bold cyan]Step 3/4: Memory Writer Agent[/bold cyan]")
+        console.print("\n[bold cyan]Step 3/5: Memory Writer Agent[/bold cyan]")
         emit({
             "stage": "memory_writer", "status": "started",
             "message": "Memory Writer Agent is creating vault files..."
@@ -344,7 +354,7 @@ class Orchestrator:
         save_processed_email_ids(new_ids)
 
         # ── Step 3.5: Rebuild knowledge graph ──────────────────
-        console.print("\n[bold cyan]Step 3.5/4: Rebuilding knowledge graph[/bold cyan]")
+        console.print("\n[bold cyan]Step 3.5/5: Rebuilding knowledge graph[/bold cyan]")
         emit({
             "stage": "graph_rebuild", "status": "started",
             "message": "Rebuilding knowledge graph with new memories..."
@@ -357,9 +367,16 @@ class Orchestrator:
         })
 
         # ── Step 4: Action Agent ──────────────────────────────
-        console.print("\n[bold cyan]Step 4/4: Action Agent[/bold cyan]")
+        console.print("\n[bold cyan]Step 4/5: Action Agent[/bold cyan]")
         action_result = self.refresh_actions(
             "Generate action items from the newly updated vault.",
+            progress_callback=progress_callback
+        )
+
+        # ── Step 5: Reconcile action items ────────────────────
+        console.print("\n[bold cyan]Step 5/5: Reconciling action items[/bold cyan]")
+        reconcile_result = self.reconcile_actions(
+            "Reconcile action items against sent emails.",
             progress_callback=progress_callback
         )
 
@@ -430,6 +447,53 @@ class Orchestrator:
         emit({
             "stage": "action_agent", "status": "complete",
             "message": "Action items generated"
+        })
+
+        return result
+
+    def reconcile_actions(self, user_input: str, progress_callback=None) -> str:
+        """
+        Run the Reconciliation Agent to compare action items against sent emails
+        and update statuses (active/closed/expired).
+        """
+        def emit(event):
+            if progress_callback:
+                progress_callback(event)
+
+        console.print("\n[bold cyan]Reconciliation Agent[/bold cyan] checking action item statuses...\n")
+        emit({
+            "stage": "reconciliation", "status": "started",
+            "message": "Comparing action items against sent emails..."
+        })
+
+        self.reconciliation_agent.reset()
+
+        def on_reconcile_retry(attempt, max_retries, delay):
+            emit({
+                "stage": "reconciliation", "status": "in_progress",
+                "message": f"API overloaded — retrying in {delay:.0f}s (attempt {attempt}/{max_retries})..."
+            })
+        self.reconciliation_agent.on_retry = on_reconcile_retry
+
+        from datetime import datetime
+        today = datetime.now().strftime('%Y-%m-%d')
+
+        prompt = (
+            "Reconcile open action items against sent emails. Steps:\n"
+            "1. List all action_required memories\n"
+            "2. Fetch sent emails from the last 30 days\n"
+            "3. For each active action item, check if any sent email addresses it\n"
+            "4. Update status to 'closed' (with reason) if action was taken\n"
+            "5. Update status to 'expired' if deadline has passed with no action\n"
+            f"Today's date is {today}."
+        )
+
+        result = self.reconciliation_agent.run(prompt, max_tool_rounds=15)
+
+        console.print("[green]OK - Reconciliation complete[/green]\n")
+        emit({
+            "stage": "reconciliation", "status": "complete",
+            "message": "Action item statuses updated"
         })
 
         return result
