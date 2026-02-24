@@ -106,7 +106,8 @@ API_RETRY_BASE_DELAY = 2.0
 # When the AI analyzes your emails, it sorts what it finds into these
 # buckets — just like organizing photos into albums.
 MEMORY_TYPES = [
-    'decisions',    # Choices you've made ("chose React over Vue")
-    'people',       # People you interact with ("Sarah — CTO at Acme")
-    'commitments',  # Promises and deadlines ("review PRs by Friday")
+    'decisions',       # Choices you've made ("chose React over Vue")
+    'people',          # People you interact with ("Sarah — CTO at Acme")
+    'commitments',     # Promises and deadlines ("review PRs by Friday")
+    'action_required', # Items that need your attention, prioritized by Eisenhower matrix
 ]
