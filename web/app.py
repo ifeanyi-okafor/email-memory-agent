@@ -12,6 +12,7 @@
 #   GET  /api/auth/status     → Check if Gmail is connected
 #   POST /api/auth/google     → Start the Gmail login process
 #   GET  /api/stream/build    → Run email→memory pipeline with live progress
+#   GET  /api/stream/refresh  → Run Action Agent with live progress
 #   POST /api/query           → Ask a question about your vault
 #   GET  /api/stats           → Memory counts per category
 #   GET  /api/memories        → List all memories
@@ -319,6 +320,63 @@ async def stream_build(
             "Cache-Control": "no-cache",       # Don't cache this stream
             "Connection": "keep-alive",         # Keep the connection open
             "X-Accel-Buffering": "no"           # Disable nginx buffering
+        }
+    )
+
+
+# ============================================================================
+# REFRESH ENDPOINT — Run Action Agent with live progress via SSE
+# ============================================================================
+
+@app.get("/api/stream/refresh")
+async def stream_refresh():
+    """
+    Run the Action Agent with live progress updates via SSE.
+
+    Scans the full vault and knowledge graph to generate/update
+    action items with Eisenhower classification.
+    """
+    event_queue = queue.Queue()
+
+    def run_refresh():
+        try:
+            def on_progress(event):
+                event_queue.put(event)
+
+            orchestrator.refresh_actions(
+                user_input="Refresh and prioritize action items",
+                progress_callback=on_progress
+            )
+        except Exception as e:
+            event_queue.put({"stage": "error", "status": "error", "message": str(e)})
+        finally:
+            event_queue.put(None)
+
+    async def event_generator():
+        thread = threading.Thread(target=run_refresh, daemon=True)
+        thread.start()
+
+        while True:
+            try:
+                event = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: event_queue.get(timeout=0.5)
+                )
+            except queue.Empty:
+                yield ": keepalive\n\n"
+                continue
+
+            if event is None:
+                break
+
+            yield f"data: {json.dumps(event)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
         }
     )
 
