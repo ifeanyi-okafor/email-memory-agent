@@ -36,6 +36,18 @@ SSE event shape (refresh):
 |--------|------|-------|-------------|---------|----------|
 | POST | `/api/query` | No | Ask question about vault | `{question: string}` | `{answer: string}` |
 
+### Orchestrator Keywords (via `/api/query`)
+
+Certain keywords in the question trigger pipeline actions instead of Q&A:
+
+| Keywords | Action |
+|----------|--------|
+| `build`, `scan`, `read email`, `fetch email`, `process email`, `analyze email`, `ingest` | Build pipeline |
+| `refresh`, `prioritize`, `actions`, `action items`, `what needs attention`, `priorities` | Action Agent refresh |
+| `reconcile`, `update actions`, `action status`, `check actions` | Reconciliation Agent |
+| `deduplicate`, `dedup`, `clean vault`, `fix duplicates` | Vault deduplication cleanup |
+| `stats`, `statistics`, `how many`, `vault info` | Vault statistics |
+
 ### Vault Browsing
 
 | Method | Path | Auth? | Description | Request | Response |

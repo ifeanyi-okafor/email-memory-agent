@@ -19,6 +19,7 @@ flowchart TD
     orchestrator --> action_agent[agents/action_agent.py]
     orchestrator --> reconciliation_agent[agents/reconciliation_agent.py]
     orchestrator --> graph[memory/graph.py]
+    orchestrator --> dedup[memory/dedup.py]
 
     email_reader --> base_agent[agents/base_agent.py]
     memory_writer --> base_agent
@@ -32,6 +33,7 @@ flowchart TD
     base_agent --> openrouter["OpenRouter (openai SDK)"]
     base_agent -.->|fallback| anthropic_api["Anthropic (anthropic SDK)"]
 
+    vault --> dedup
     gmail_tools --> settings
     vault --> settings
 ```
@@ -43,6 +45,7 @@ flowchart TD
 | `config/settings.py` | All agents, vault, gmail_tools, orchestrator |
 | `agents/base_agent.py` | All five agents (provider adapter + retry + fallback) |
 | `memory/vault.py` | Orchestrator, web/app.py, Memory MCP server |
+| `memory/dedup.py` | vault.py (pre-write check), Orchestrator (cleanup route) |
 | `tools/gmail_tools.py` | Orchestrator, web/app.py, Gmail MCP server |
 | `orchestrator.py` | web/app.py only |
 | `web/app.py` | Frontend only |

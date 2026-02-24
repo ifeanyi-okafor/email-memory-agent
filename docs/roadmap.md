@@ -37,7 +37,7 @@ Redesign the UI with a polished aesthetic, add login/logout flow, and incrementa
 Improve agent intelligence, vault quality, and add new memory types.
 
 - [ ] 3.1 LLM-based intent classification (replace keyword routing)
-- [ ] 3.2 Memory deduplication and merging within vault
+- [x] 3.2 Memory deduplication and merging within vault
 - [x] 3.3 Bidirectional knowledge graph (`_graph.json`) with wiki-link resolution
 - [x] 3.4 New memory type: `action_required` with Eisenhower matrix prioritization
 - [x] 3.5 Action Agent — scans vault + graph, generates prioritized action items

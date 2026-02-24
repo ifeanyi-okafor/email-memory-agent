@@ -19,9 +19,11 @@ flowchart LR
         ER -->|Claude API| Observations[Text Observations]
     end
 
-    subgraph "Step 4: Write"
+    subgraph "Step 4: Write + Dedup"
         Observations --> MW[Memory Writer Agent]
-        MW -->|Claude API + MCP tools| Vault[Vault Files]
+        MW -->|Claude API + MCP tools| Dedup{Duplicate check}
+        Dedup -->|New| Vault[Vault Files]
+        Dedup -->|Exists| Merge[Merge into existing]
     end
 
     subgraph "Step 5: Track"
@@ -49,7 +51,7 @@ flowchart LR
 2. Loads `_processed_emails.json`, filters out already-seen IDs
 3. Splits remaining into batches of `EMAIL_BATCH_SIZE` (10)
 4. Each batch sent to `EmailReaderAgent.analyze_batch()` which returns text observations
-5. All observations concatenated and sent to `MemoryWriterAgent.run()` to create vault files
+5. All observations concatenated and sent to `MemoryWriterAgent.run()` to create vault files. Each `write_memory()` call checks for duplicates via `memory/dedup.py` — if a matching file exists, content is merged instead of creating a new file.
 6. Newly processed IDs saved to `_processed_emails.json`
 
 ### Progress events (SSE)

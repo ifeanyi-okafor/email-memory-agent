@@ -89,6 +89,7 @@ graph TB
 | Gmail MCP | `mcp_servers/gmail_server.py` | Exposes Gmail API as MCP tools |
 | Memory MCP | `mcp_servers/memory_server.py` | Exposes vault read/write as MCP tools |
 | Vault helpers | `memory/vault.py` | Init, search, stats, read/write, processed ID tracking |
+| Dedup module | `memory/dedup.py` | Programmatic duplicate detection + merging + cleanup |
 | Knowledge graph | `memory/graph.py` | Bidirectional graph: rebuild, traverse, backlink injection |
 | Gmail tools | `tools/gmail_tools.py` | OAuth, email fetching, auth checks |
 | Config | `config/settings.py` | Central settings (paths, model, limits) |
@@ -99,6 +100,7 @@ graph TB
 - **MCP protocol** — agents consume tools from MCP servers, not direct function calls
 - **File-based vault** — YAML frontmatter + markdown body + wiki-links
 - **Knowledge graph** — `_graph.json` is a bidirectional adjacency map rebuilt on every `write_memory()`. Backlinks auto-injected into frontmatter.
+- **Programmatic dedup** — `memory/dedup.py` runs inside `write_memory()` as a pre-write safety net. People matched by `name` frontmatter; non-people matched by normalized title containment, word-set overlap, or fuzzy matching (SequenceMatcher >= 0.70). One-time cleanup via `deduplicate` keyword.
 - **Keyword routing** — simple string matching in orchestrator (not LLM-based)
 - **Multi-provider LLM** — OpenRouter (default, Kimi K2.5) with automatic Anthropic fallback. Adapter in `base_agent.py` converts between OpenAI and Anthropic message formats.
 - **Incremental processing** — tracks processed email IDs in `_processed_emails.json`
