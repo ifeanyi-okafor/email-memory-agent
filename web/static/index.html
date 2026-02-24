@@ -2298,6 +2298,11 @@ a {
                         <span class="vault-tree-label">Decisions</span>
                         <span class="vault-tree-count" id="countDecisions">&mdash;</span>
                     </button>
+                    <button class="vault-tree-item" data-type="action_required" onclick="selectVaultType('action_required', this)" aria-label="Action Required">
+                        <i class="fa-solid fa-bolt vault-tree-icon" aria-hidden="true"></i>
+                        <span class="vault-tree-label">Action Required</span>
+                        <span class="vault-tree-count" id="countActionRequired">&mdash;</span>
+                    </button>
                 </div>
             </div>
 
@@ -3420,7 +3425,7 @@ a {
     }
 
     function updateVaultCounts() {
-        var counts = { people: 0, decisions: 0, commitments: 0 };
+        var counts = { people: 0, decisions: 0, commitments: 0, action_required: 0 };
         for (var i = 0; i < vaultAllMemories.length; i++) {
             var t = vaultAllMemories[i].type;
             if (counts[t] !== undefined) counts[t]++;
@@ -3432,6 +3437,8 @@ a {
         if (el) el.textContent = counts.decisions;
         el = document.getElementById('countCommitments');
         if (el) el.textContent = counts.commitments;
+        el = document.getElementById('countActionRequired');
+        if (el) el.textContent = counts.action_required;
     }
 
     window.selectVaultType = function(type, btn) {
