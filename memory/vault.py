@@ -561,6 +561,10 @@ def list_memories(memory_type: str = None) -> list[dict]:
                     'date': mem['frontmatter'].get('date', ''),
                     'priority': mem['frontmatter'].get('priority', ''),
                     'tags': mem['frontmatter'].get('tags', []),
+                    'status': mem['frontmatter'].get('status') if mtype == 'action_required' else None,
+                    'status_reason': mem['frontmatter'].get('status_reason') if mtype == 'action_required' else None,
+                    'quadrant': mem['frontmatter'].get('quadrant') if mtype == 'action_required' else None,
+                    'deadline': mem['frontmatter'].get('deadline') if mtype == 'action_required' else None,
                 })
 
     return memories

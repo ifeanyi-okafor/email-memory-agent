@@ -314,3 +314,33 @@ class TestActionRequiredStatusFields:
             fm = result['frontmatter']
             assert fm['status'] == 'closed'
             assert 'Replied to Sarah' in fm['status_reason']
+
+    def test_list_memories_includes_status(self):
+        """list_memories should return status field for action_required items."""
+        with patch('memory.vault.VAULT_ROOT', TEST_VAULT):
+            write_memory(
+                title="Reply to Jake",
+                memory_type="action_required",
+                content="Timeline question.",
+                quadrant="urgent-important",
+                status="closed",
+                status_reason="Replied on 2026-02-22",
+            )
+            memories = list_memories("action_required")
+
+            assert len(memories) == 1
+            assert memories[0]['status'] == 'closed'
+            assert memories[0]['status_reason'] == 'Replied on 2026-02-22'
+
+    def test_list_memories_status_default_for_old_items(self):
+        """Items without status field should default to 'active' in listing."""
+        with patch('memory.vault.VAULT_ROOT', TEST_VAULT):
+            write_memory(
+                title="Chose Python",
+                memory_type="decisions",
+                content="Selected Python for backend.",
+            )
+            memories = list_memories("decisions")
+
+            assert len(memories) == 1
+            assert memories[0].get('status') is None
