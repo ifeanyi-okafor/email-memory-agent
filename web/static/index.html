@@ -1396,6 +1396,40 @@ a {
     color: #E65100;
 }
 
+.vault-filter-bar {
+    display: none;
+    gap: 4px;
+    padding: 0 12px 8px;
+    flex-wrap: wrap;
+}
+
+.vault-filter-bar.visible {
+    display: flex;
+}
+
+.vault-filter-btn {
+    font-family: var(--font-sans);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-medium);
+    background: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.vault-filter-btn:hover {
+    background: var(--surface-warm);
+}
+
+.vault-filter-btn.active {
+    background: var(--accent-sage-glow);
+    color: var(--accent-sage-deep);
+    border-color: var(--accent-sage-soft);
+}
+
 .vault-file-tags {
     display: flex;
     gap: 4px;
@@ -2339,6 +2373,12 @@ a {
                     <div class="vault-search-inline">
                         <i class="fa-solid fa-magnifying-glass vault-search-icon-sm" aria-hidden="true"></i>
                         <input type="text" class="vault-search-sm" id="vaultSearch" placeholder="Filter..." oninput="debouncedSearch()">
+                    </div>
+                    <div class="vault-filter-bar" id="vaultFilterBar">
+                        <button class="vault-filter-btn active" data-filter="all" onclick="setStatusFilter('all', this)">All</button>
+                        <button class="vault-filter-btn" data-filter="active" onclick="setStatusFilter('active', this)">Active</button>
+                        <button class="vault-filter-btn" data-filter="closed" onclick="setStatusFilter('closed', this)">Closed</button>
+                        <button class="vault-filter-btn" data-filter="expired" onclick="setStatusFilter('expired', this)">Expired</button>
                     </div>
                 </div>
                 <div class="vault-col-list" id="vaultItemList">
@@ -3433,6 +3473,7 @@ a {
     var vaultSelectedType = null;
     var vaultSelectedFile = null;
     var vaultAllMemories = [];
+    var vaultStatusFilter = 'all';
 
     async function loadVaultData() {
         try {
@@ -3486,6 +3527,18 @@ a {
         var searchEl = document.getElementById('vaultSearch');
         if (searchEl) searchEl.value = '';
 
+        // Show filter bar only for action_required
+        var filterBar = document.getElementById('vaultFilterBar');
+        if (filterBar) {
+            filterBar.classList.toggle('visible', type === 'action_required');
+        }
+        // Reset filter when switching types
+        vaultStatusFilter = 'all';
+        var filterBtns = document.querySelectorAll('.vault-filter-btn');
+        for (var i = 0; i < filterBtns.length; i++) {
+            filterBtns[i].classList.toggle('active', filterBtns[i].getAttribute('data-filter') === 'all');
+        }
+
         // Render items
         renderVaultItems(type);
 
@@ -3507,6 +3560,13 @@ a {
             filtered = filtered.filter(function(m) {
                 return (m.title && m.title.toLowerCase().indexOf(q) !== -1) ||
                        (m.tags && m.tags.join(' ').toLowerCase().indexOf(q) !== -1);
+            });
+        }
+
+        // Apply status filter for action_required
+        if (type === 'action_required' && vaultStatusFilter !== 'all') {
+            filtered = filtered.filter(function(m) {
+                return (m.status || 'active') === vaultStatusFilter;
             });
         }
 
@@ -3684,6 +3744,16 @@ a {
                 renderVaultItems(vaultSelectedType, query || null);
             }
         }, 300);
+    };
+
+    window.setStatusFilter = function(filter, btn) {
+        vaultStatusFilter = filter;
+        var buttons = document.querySelectorAll('.vault-filter-btn');
+        for (var i = 0; i < buttons.length; i++) {
+            buttons[i].classList.remove('active');
+        }
+        if (btn) btn.classList.add('active');
+        renderVaultItems(vaultSelectedType);
     };
 
     // ── PROFILE PAGE ───────────────────────────────────────────────────
