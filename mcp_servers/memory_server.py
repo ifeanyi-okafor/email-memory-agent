@@ -69,7 +69,12 @@ async def list_tools() -> list[Tool]:
                     "priority": {"type": "string", "enum": ["🔴", "🟡", "🟢"], "default": "🟡"},
                     "tags": {"type": "array", "items": {"type": "string"}},
                     "related_to": {"type": "array", "items": {"type": "string"}},
-                    "source_emails": {"type": "array", "items": {"type": "string"}}
+                    "source_emails": {"type": "array", "items": {"type": "string"}},
+                    "quadrant": {"type": "string", "enum": ["urgent-important", "important-not-urgent", "urgent-not-important", "neither"]},
+                    "priority_justification": {"type": "string"},
+                    "deadline": {"type": "string"},
+                    "source_type": {"type": "string"},
+                    "source_memories": {"type": "array", "items": {"type": "string"}},
                 },
                 "required": ["title", "memory_type", "content"]
             }
@@ -170,6 +175,11 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             tags=arguments.get('tags', []),
             related_to=arguments.get('related_to', []),
             source_emails=arguments.get('source_emails', []),
+            quadrant=arguments.get('quadrant'),
+            priority_justification=arguments.get('priority_justification'),
+            deadline=arguments.get('deadline'),
+            source_type=arguments.get('source_type'),
+            source_memories=arguments.get('source_memories'),
         )
         return [TextContent(type="text", text=f"Memory written to: {filepath}")]
 
