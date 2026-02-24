@@ -207,6 +207,12 @@ def write_memory(
     tags: list[str] = None,
     related_to: list[str] = None,
     source_emails: list[str] = None,
+    # Action Required-specific fields (optional, only used when memory_type == 'action_required')
+    quadrant: str = None,
+    priority_justification: str = None,
+    deadline: str = None,
+    source_type: str = None,
+    source_memories: list[str] = None,
     # People-specific fields (optional, only used when memory_type == 'people')
     name: str = None,
     role: str = None,
@@ -329,6 +335,41 @@ def write_memory(
 
 # {name}
 
+{content}
+"""
+
+    elif memory_type == 'action_required':
+        # ── Action Required-specific frontmatter ─────────────
+        frontmatter = {
+            'title': title,
+            'date': today,
+            'updated': today,
+            'category': 'action_required',
+            'memoryType': 'action_required',
+            'quadrant': quadrant or 'important-not-urgent',
+            'priority_justification': priority_justification or '',
+            'deadline': deadline or '',
+            'source_type': source_type or '',
+            'tags': tags or [],
+            'related_to': related_to or [],
+            'source_emails': source_emails or [],
+            'source_memories': source_memories or [],
+        }
+
+        # Build wiki-links section
+        wiki_links_section = ''
+        if related_to:
+            links = ', '.join([f'[[{entity}]]' for entity in related_to])
+            wiki_links_section = f'\n**Related:** {links}\n'
+
+        yaml_str = yaml.dump(frontmatter, default_flow_style=False, sort_keys=False)
+        file_content = f"""---
+{yaml_str.strip()}
+---
+
+# {title}
+
+{wiki_links_section}
 {content}
 """
 
