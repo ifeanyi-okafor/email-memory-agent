@@ -258,6 +258,11 @@ When done, return a summary of memories created, updated, and skipped.
                             "items": {"type": "string"},
                             "description": "Subject lines of source emails as evidence"
                         },
+                        "source_memories": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Filepaths of related vault memories (for provenance tracking)"
+                        },
                         # People-specific structured fields
                         "name": {
                             "type": "string",
