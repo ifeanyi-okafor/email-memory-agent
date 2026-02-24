@@ -414,6 +414,12 @@ def write_memory(
         description=title,
     )
 
+    # ── Rebuild the knowledge graph ─────────────────────────────
+    # This keeps the graph index up-to-date with every write,
+    # including injecting backlinks into related files.
+    from memory.graph import rebuild_graph
+    rebuild_graph()
+
     # Detect whether this was an update to an existing people file.
     # "original_date" is only defined inside the people branch above,
     # so we guard with a memory_type check first.
