@@ -3521,7 +3521,9 @@ a {
 
         // Update column 2 header
         var titleEl = document.getElementById('vaultItemsTitle');
-        if (titleEl) titleEl.textContent = type.charAt(0).toUpperCase() + type.slice(1);
+        if (titleEl) titleEl.textContent = type.split('_').map(function(w) {
+            return w.charAt(0).toUpperCase() + w.slice(1);
+        }).join(' ');
 
         // Clear search
         var searchEl = document.getElementById('vaultSearch');
