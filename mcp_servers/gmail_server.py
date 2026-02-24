@@ -102,6 +102,28 @@ async def list_tools() -> list[Tool]:
                 }
             }
         ),
+        Tool(
+            name="fetch_sent_emails",
+            description=(
+                "Fetch emails the user has SENT (from their Sent Mail folder). "
+                "Use this to check if the user replied to or followed up on something."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "max_results": {
+                        "type": "integer",
+                        "description": "Maximum sent emails to fetch (default: 100)",
+                        "default": 100
+                    },
+                    "days_back": {
+                        "type": "integer",
+                        "description": "Fetch sent emails from last N days (default: 30)",
+                        "default": 30
+                    }
+                }
+            }
+        ),
     ]
 
 
@@ -133,6 +155,17 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         )
 
         # Wrap the results as TextContent (MCP's standard format)
+        return [TextContent(
+            type="text",
+            text=json.dumps(emails, indent=2, default=str)
+        )]
+
+    elif name == "fetch_sent_emails":
+        emails = fetch_emails(
+            max_results=arguments.get('max_results', 100),
+            query='in:sent',
+            days_back=arguments.get('days_back', 30),
+        )
         return [TextContent(
             type="text",
             text=json.dumps(emails, indent=2, default=str)
