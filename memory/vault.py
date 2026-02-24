@@ -213,6 +213,10 @@ def write_memory(
     deadline: str = None,
     source_type: str = None,
     source_memories: list[str] = None,
+    # Status tracking fields (for action_required reconciliation)
+    status: str = None,
+    status_reason: str = None,
+    status_updated: str = None,
     # People-specific fields (optional, only used when memory_type == 'people')
     name: str = None,
     role: str = None,
@@ -354,6 +358,9 @@ def write_memory(
             'related_to': related_to or [],
             'source_emails': source_emails or [],
             'source_memories': source_memories or [],
+            'status': status or 'active',
+            'status_reason': status_reason or '',
+            'status_updated': status_updated or today,
         }
 
         # Build wiki-links section

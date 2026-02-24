@@ -22,7 +22,9 @@ TEST_VAULT = Path('test_vault_preview_tmp')
 @pytest.fixture(autouse=True)
 def setup_test_vault():
     """Create a temporary vault before each test, clean up after."""
-    with patch('memory.vault.VAULT_ROOT', TEST_VAULT):
+    with patch('memory.vault.VAULT_ROOT', TEST_VAULT), \
+         patch('memory.graph.VAULT_ROOT', TEST_VAULT), \
+         patch('memory.graph.GRAPH_FILE', TEST_VAULT / '_graph.json'):
         initialize_vault()
         yield
     # Cleanup
@@ -253,3 +255,62 @@ class TestAPIEndpointChain:
                 data = resp.json()
                 assert len(data['content']) > 0
                 assert "review PRs" in data['content']
+
+
+class TestActionRequiredStatusFields:
+    """Test that action_required memories support status fields."""
+
+    def test_write_memory_with_status_fields(self):
+        """write_memory should include status, status_reason, status_updated in frontmatter."""
+        with patch('memory.vault.VAULT_ROOT', TEST_VAULT):
+            filepath = write_memory(
+                title="Reply to Jake about project timeline",
+                memory_type="action_required",
+                content="Jake asked about Q2 timeline.",
+                quadrant="urgent-important",
+                status="active",
+                status_reason="",
+                status_updated="2026-02-23",
+            )
+            rel_path = str(Path(filepath).relative_to(TEST_VAULT))
+            result = read_memory(rel_path)
+
+            assert result is not None
+            fm = result['frontmatter']
+            assert fm['status'] == 'active'
+            assert fm['status_updated'] == '2026-02-23'
+
+    def test_write_memory_status_defaults(self):
+        """When no status is provided, default to 'active'."""
+        with patch('memory.vault.VAULT_ROOT', TEST_VAULT):
+            filepath = write_memory(
+                title="Follow up on contract",
+                memory_type="action_required",
+                content="Need to review contract terms.",
+                quadrant="important-not-urgent",
+            )
+            rel_path = str(Path(filepath).relative_to(TEST_VAULT))
+            result = read_memory(rel_path)
+
+            fm = result['frontmatter']
+            assert fm['status'] == 'active'
+            assert fm['status_reason'] == ''
+
+    def test_write_memory_closed_status(self):
+        """Should be able to write a memory with closed status."""
+        with patch('memory.vault.VAULT_ROOT', TEST_VAULT):
+            filepath = write_memory(
+                title="Send report to Sarah",
+                memory_type="action_required",
+                content="Monthly report due.",
+                quadrant="urgent-important",
+                status="closed",
+                status_reason="Replied to Sarah on 2026-02-22",
+                status_updated="2026-02-23",
+            )
+            rel_path = str(Path(filepath).relative_to(TEST_VAULT))
+            result = read_memory(rel_path)
+
+            fm = result['frontmatter']
+            assert fm['status'] == 'closed'
+            assert 'Replied to Sarah' in fm['status_reason']
