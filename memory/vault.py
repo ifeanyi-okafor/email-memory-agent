@@ -270,22 +270,50 @@ def write_memory(
             f"Must be one of: {MEMORY_TYPES}"
         )
 
-    # ── Generate the filename ──────────────────────────────────
-    # For "people" memories, use just the person's name (before the " — ")
-    # so files are named like "sarah-chen-a1b2.md" instead of
-    # "sarah-chen-cto-at-acme-a1b2.md"
-    if memory_type == 'people' and ' — ' in title:
-        name_part = title.split(' — ')[0].strip()
-        # "Me" is a singleton (the primary user) — use a clean filename
-        # without the hash suffix, producing "me.md" instead of "me-ab86.md"
-        if name_part.lower() == 'me':
-            slug = 'me'
-        else:
-            slug = _slugify(name_part)
+    # ── Check for existing duplicate ─────────────────────────────
+    # Programmatic safety net: catch duplicates the LLM missed.
+    # If a matching file already exists, redirect the write there
+    # instead of creating a new file with a different slug.
+    from memory.dedup import find_duplicate, merge_contents as dedup_merge
+
+    duplicate_path = find_duplicate(title, memory_type, name=name)
+
+    if duplicate_path and duplicate_path.exists():
+        # For non-people types, merge content and frontmatter now.
+        # For people types, let the existing people-update logic below
+        # handle merging — we just redirect the filepath.
+        if memory_type != 'people':
+            new_fm = {'tags': tags or [], 'related_to': related_to or []}
+            if source_emails:
+                new_fm['source_emails'] = source_emails
+            merged_fm, merged_body = dedup_merge(duplicate_path, content, new_fm)
+
+            # Preserve the merged tags/related_to for the write below
+            tags = merged_fm.get('tags', tags)
+            related_to = merged_fm.get('related_to', related_to)
+            if not source_emails and merged_fm.get('source_emails'):
+                source_emails = merged_fm['source_emails']
+            content = merged_body
+
+        filepath = duplicate_path
+        print(f"   [DEDUP] Found existing file, updating: {filepath}")
     else:
-        slug = _slugify(title)
-    filename = f"{slug}.md"
-    filepath = VAULT_ROOT / memory_type / filename
+        # ── Generate the filename ──────────────────────────────────
+        # For "people" memories, use just the person's name (before the " — ")
+        # so files are named like "sarah-chen-a1b2.md" instead of
+        # "sarah-chen-cto-at-acme-a1b2.md"
+        if memory_type == 'people' and ' — ' in title:
+            name_part = title.split(' — ')[0].strip()
+            # "Me" is a singleton (the primary user) — use a clean filename
+            # without the hash suffix, producing "me.md" instead of "me-ab86.md"
+            if name_part.lower() == 'me':
+                slug = 'me'
+            else:
+                slug = _slugify(name_part)
+        else:
+            slug = _slugify(title)
+        filename = f"{slug}.md"
+        filepath = VAULT_ROOT / memory_type / filename
 
     # ── Build the YAML frontmatter ─────────────────────────────
     today = datetime.now().strftime('%Y-%m-%d')

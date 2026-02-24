@@ -139,6 +139,12 @@ class Orchestrator:
         ]):
             return self.reconcile_actions(user_input)
 
+        # ── Check for "deduplicate" intent ──────────────────────
+        elif any(kw in user_lower for kw in [
+            'deduplicate', 'dedup', 'clean vault', 'fix duplicates'
+        ]):
+            return self.deduplicate_vault()
+
         # ── Check for "stats" intent ───────────────────────────
         elif any(kw in user_lower for kw in [
             'stats', 'statistics', 'how many', 'vault info'
@@ -497,6 +503,39 @@ class Orchestrator:
         })
 
         return result
+
+    def deduplicate_vault(self) -> str:
+        """
+        Run the one-time vault deduplication cleanup.
+
+        Scans all memory files, groups duplicates by name/title similarity,
+        merges them into the oldest file, and deletes the extras.
+
+        Returns:
+            str: Summary of what was merged and deleted.
+        """
+        from memory.dedup import cleanup_duplicates
+
+        console.print("\n[bold cyan]Vault Deduplication[/bold cyan] scanning for duplicates...\n")
+
+        result = cleanup_duplicates()
+
+        # Rebuild the knowledge graph after deletions
+        graph = rebuild_graph()
+
+        if result['deleted'] == 0:
+            summary = "No duplicates found. Vault is clean!"
+        else:
+            summary = (
+                f"Dedup complete: merged {result['merged']} group(s), "
+                f"removed {result['deleted']} duplicate file(s).\n"
+            )
+            for mtype, count in result['by_type'].items():
+                summary += f"   {mtype}: {count} duplicate(s) removed\n"
+            summary += f"\nGraph rebuilt: {len(graph['nodes'])} nodes, {len(graph['edges'])} edges"
+
+        console.print(f"[green]{summary}[/green]\n")
+        return summary
 
     def query_memory(self, user_input: str) -> str:
         """

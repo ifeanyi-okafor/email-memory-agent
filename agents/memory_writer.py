@@ -71,9 +71,10 @@ Each observation has: type, title, content, priority, evidence_emails, tags, rel
 For "people" observations, there is also a "person_data" object with structured fields.
 
 YOUR PROCESS FOR NON-PEOPLE OBSERVATIONS:
-1. Use search_vault to check if similar memories already exist
-2. For each NEW observation, use write_memory to create a memory file
-3. Choose appropriate wiki-links (related_to) to connect related memories
+1. For each observation, call write_memory to create a memory file
+   (the vault handles duplicate detection automatically — if a similar memory
+   already exists, the vault will merge instead of creating a duplicate)
+2. Choose appropriate wiki-links (related_to) to connect related memories
 
 YOUR PROCESS FOR PEOPLE OBSERVATIONS (CRITICAL — follow exactly):
 1. Search for the person by name using search_vault
