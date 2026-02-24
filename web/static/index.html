@@ -1370,6 +1370,32 @@ a {
     color: var(--text-tertiary);
 }
 
+.vault-status-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    font-family: var(--font-sans);
+    padding: 1px 8px;
+    border-radius: var(--radius-full);
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.vault-status-badge.status-active {
+    background: rgba(76, 175, 80, 0.12);
+    color: #2E7D32;
+}
+
+.vault-status-badge.status-closed {
+    background: rgba(158, 158, 158, 0.12);
+    color: #757575;
+}
+
+.vault-status-badge.status-expired {
+    background: rgba(255, 167, 38, 0.12);
+    color: #E65100;
+}
+
 .vault-file-tags {
     display: flex;
     gap: 4px;
@@ -3511,6 +3537,15 @@ a {
                 date.className = 'vault-file-date';
                 date.textContent = m.date;
                 item.appendChild(date);
+            }
+
+            // Status badge for action_required items
+            if (type === 'action_required') {
+                var status = m.status || 'active';
+                var badge = document.createElement('span');
+                badge.className = 'vault-status-badge status-' + status;
+                badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+                item.appendChild(badge);
             }
 
             if (m.tags && m.tags.length > 0) {
