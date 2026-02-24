@@ -29,6 +29,32 @@ Related: [[other-memory-filename]]
 | `commitments` | `vault/commitments/` | "Review PRs by Friday" |
 | `action_required` | `vault/action_required/` | "Follow up with Alice on contract review" |
 
+### Commitment Frontmatter
+
+`commitments` files include a participation lifecycle field:
+
+```yaml
+---
+title: "Austin Meetup Moderation — Feb 21"
+type: "commitments"
+date: "2026-02-24"
+priority: "🔴"
+commitment_status: "confirmed"
+tags: ["meetup", "austin"]
+related_to: ["Austin Coding Meetup"]
+source_emails: ["Re: Meetup Moderation Invite"]
+---
+```
+
+Commitment status values:
+
+| Status | Meaning |
+| ------ | ------- |
+| `invited` | Received invitation/notification, no evidence of acceptance (default) |
+| `confirmed` | User RSVP'd, registered, replied "yes", or explicitly accepted |
+| `declined` | User explicitly declined, cancelled, or opted out |
+| `tentative` | User expressed interest but hasn't confirmed |
+
 ### Action Required Frontmatter
 
 `action_required` files include additional Eisenhower classification fields:

@@ -17,7 +17,8 @@ All endpoints served by FastAPI on `http://localhost:8000`.
 
 | Method | Path | Auth? | Description | Request | Response |
 |--------|------|-------|-------------|---------|----------|
-| GET | `/api/stream/build` | Yes | Run email→memory pipeline | Query: `days_back`, `max_emails`, `gmail_query` | SSE stream |
+| GET | `/api/build/status` | No | Check build pipeline state | — | `{status, stage, message, step, started_at, finished_at, stats, source}` |
+| GET | `/api/stream/build` | Yes | Run email→memory pipeline | Query: `days_back`, `max_emails`, `gmail_query` | SSE stream (409 if build already running) |
 | GET | `/api/stream/refresh` | No | Run Action Agent (standalone) | — | SSE stream |
 
 SSE event shape (build):

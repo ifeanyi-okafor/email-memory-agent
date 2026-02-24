@@ -48,17 +48,27 @@ TOKEN_PATH = CONFIG_DIR / "token.pickle"
 
 # ── LLM (Large Language Model) SETTINGS ────────────────────────────────
 # These control which AI model our agents use.
+#
+# The system supports two LLM providers:
+#   1. OpenRouter (default) — routes requests to many models via one API.
+#      Uses the OpenAI-compatible chat completions format.
+#   2. Anthropic (fallback) — direct access to Claude models.
+#
+# If OPENROUTER_API_KEY is set, OpenRouter is used as the primary provider.
+# If an OpenRouter call fails, the system falls back to Anthropic automatically.
+# If only ANTHROPIC_API_KEY is set, Anthropic is used exclusively.
 
-# "ANTHROPIC_API_KEY" is your secret key for using Claude.
-# We read it from an environment variable (set in your .env file) so it
-# never appears in the code itself — that's a security best practice.
-# The "or empty string" part means: if the key isn't set, use "" (blank).
+# ── OpenRouter (primary provider) ──
+# OpenRouter lets you use many models through one API. We default to
+# Kimi K2.5 — a strong model with tool-calling support.
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "moonshotai/kimi-k2.5")
+
+# ── Anthropic (fallback provider) ──
+# Claude is used as the fallback when OpenRouter is unavailable or errors out.
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
-
-# "MODEL" is the specific Claude model we use. "claude-sonnet-4-20250514"
-# is a good balance of intelligence and speed. Think of it like choosing
-# between economy and first class — Sonnet is business class.
-MODEL = "claude-sonnet-4-20250514"
+ANTHROPIC_MODEL = "claude-sonnet-4-20250514"
 
 # "MAX_TOKENS" is the maximum length of each AI response.
 # 4096 tokens is roughly 3,000 words — plenty for our use case.

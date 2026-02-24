@@ -95,8 +95,15 @@ MEMORY TYPE GUIDELINES (4 valid types):
 - "people" — Individuals the user interacts with (uses structured person template).
   Preferences, topics, and communication style are captured within person files.
 - "decisions" — Explicit choices the user has made
-- "commitments" — Things the user has accepted, agreed to, or committed to doing
-  (events RSVPed to, webinars registered for, promises made to others)
+- "commitments" — Things the user has accepted, agreed to, or been invited to.
+  MUST include commitment_status:
+    * "invited" — User received an invitation/notification but no evidence of acceptance
+    * "confirmed" — User has RSVP'd, registered, replied "yes", or explicitly accepted
+    * "declined" — User explicitly declined, cancelled, or opted out
+    * "tentative" — User expressed interest ("maybe", "I'll try") but hasn't confirmed
+  Default to "invited" unless you have clear evidence of confirmation in the email text.
+  Evidence of confirmation: words like "registered", "confirmed", "RSVP'd", "signed up",
+  "accepted", "will attend", "looking forward to attending", reply with "yes"/"count me in".
 - "action_required" — External requests that need the user's action but haven't been acted on yet
   (notices, invitations to register, pending expirations, review requests, follow-ups awaiting response)
 
@@ -295,6 +302,18 @@ When done, return a summary of memories created, updated, and skipped.
                         "timezone": {
                             "type": "string",
                             "description": "Person's timezone (people only)"
+                        },
+                        # Commitment-specific fields
+                        "commitment_status": {
+                            "type": "string",
+                            "enum": ["invited", "confirmed", "declined", "tentative"],
+                            "description": (
+                                "Participation status for commitments only. "
+                                "'invited' = received invitation, no evidence of acceptance; "
+                                "'confirmed' = user RSVP'd, registered, or explicitly accepted; "
+                                "'declined' = user explicitly declined or cancelled; "
+                                "'tentative' = user expressed interest but hasn't confirmed."
+                            )
                         }
                     },
                     "required": ["title", "memory_type", "content"]

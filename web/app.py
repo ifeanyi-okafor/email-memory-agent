@@ -57,6 +57,22 @@ from tools.gmail_tools import (
 # Created once at startup, shared across all requests.
 orchestrator = None
 
+# Build state — tracks whether a build pipeline is running so that
+# page refreshes can reconnect to the progress instead of restarting.
+# Protected by a threading.Lock for thread-safe reads/writes.
+import time as _time
+_build_lock = threading.Lock()
+build_state = {
+    "status": "idle",       # idle | running | complete | error
+    "stage": "",            # current pipeline stage
+    "message": "",          # human-readable status message
+    "step": "",             # e.g. "2/5"
+    "started_at": None,     # epoch timestamp
+    "finished_at": None,    # epoch timestamp
+    "stats": None,          # vault stats on completion
+    "source": "",           # "auto" or "manual"
+}
+
 
 # ── SERVER STARTUP ─────────────────────────────────────────────────────
 @asynccontextmanager
@@ -216,6 +232,22 @@ async def serve_frontend():
 
 
 # ============================================================================
+# BUILD STATE ENDPOINT — Check pipeline status without starting a build
+# ============================================================================
+
+@app.get("/api/build/status")
+async def get_build_status():
+    """
+    Return the current build pipeline state.
+
+    The frontend polls this on page load to decide whether to start a
+    new build or display the status of a running/completed one.
+    """
+    with _build_lock:
+        return dict(build_state)
+
+
+# ============================================================================
 # BUILD ENDPOINT — Live progress via SSE
 # ============================================================================
 
@@ -227,39 +259,80 @@ async def stream_build(
 ):
     """
     Run the email→memory pipeline with live progress updates via SSE.
-    
+
     SSE = Server-Sent Events. The browser connects and receives events:
         data: {"stage": "email_reader", "status": "started", "message": "..."}
         data: {"stage": "complete", "stats": {...}}
-    
+
     HOW IT WORKS:
     1. Pipeline runs in a BACKGROUND THREAD
     2. Progress events go into a QUEUE (thread-safe mailbox)
     3. An async generator reads from queue and yields SSE events
     4. FastAPI streams those events to the browser in real-time
+
+    CONCURRENCY GUARD:
+    Only one build can run at a time. If a build is already running,
+    returns a 409 Conflict so the frontend can poll /api/build/status instead.
     """
+    # Prevent concurrent builds
+    with _build_lock:
+        if build_state["status"] == "running":
+            raise HTTPException(
+                status_code=409,
+                detail="A build is already in progress."
+            )
+        # Mark build as running
+        build_state.update({
+            "status": "running",
+            "stage": "starting",
+            "message": "Starting pipeline...",
+            "step": "",
+            "started_at": _time.time(),
+            "finished_at": None,
+            "stats": None,
+            "source": "auto" if gmail_query == "" and days_back == 180 else "manual",
+        })
+
     # Thread-safe queue: pipeline thread puts events in, SSE stream reads them out
     event_queue = queue.Queue()
+
+    def _update_build_state(event):
+        """Update the global build_state from a pipeline progress event."""
+        with _build_lock:
+            build_state["stage"] = event.get("stage", build_state["stage"])
+            build_state["message"] = event.get("message", build_state["message"])
+
+            # Compute step ratio from stage
+            stage_order = ["fetching", "email_reader", "memory_writer",
+                           "graph_rebuild", "action_agent", "reconciliation"]
+            stage_key = event.get("stage", "")
+            if stage_key in stage_order:
+                idx = stage_order.index(stage_key)
+                total = len(stage_order)
+                build_state["step"] = f"{idx + 1}/{total}"
+
+            if event.get("stage") == "complete":
+                build_state["status"] = "complete"
+                build_state["finished_at"] = _time.time()
+                build_state["stats"] = event.get("stats")
+                build_state["step"] = f"{len(stage_order)}/{len(stage_order)}"
+
+            if event.get("stage") == "error":
+                build_state["status"] = "error"
+                build_state["finished_at"] = _time.time()
 
     def run_pipeline():
         """
         Run the batched email→memory pipeline in a background thread.
 
         Uses orchestrator.build_memory() with a progress callback that
-        pushes events into the SSE queue. The orchestrator handles:
-          1. Fetching emails from Gmail
-          2. Splitting into batches and analyzing each batch
-          3. Sending observations to the Memory Writer
-
-        Progress events flow: orchestrator → callback → queue → SSE → browser
+        pushes events into the SSE queue AND updates global build_state.
         """
         try:
-            # The progress callback puts events directly into the SSE queue.
-            # The orchestrator calls this at each pipeline stage/batch.
             def on_progress(event):
+                _update_build_state(event)
                 event_queue.put(event)
 
-            # Pass parameters directly to the orchestrator (no prompt parsing needed)
             orchestrator.build_memory(
                 user_input="Build my memory from emails",
                 progress_callback=on_progress,
@@ -269,7 +342,9 @@ async def stream_build(
             )
 
         except Exception as e:
-            event_queue.put({"stage": "error", "status": "error", "message": str(e)})
+            error_event = {"stage": "error", "status": "error", "message": str(e)}
+            _update_build_state(error_event)
+            event_queue.put(error_event)
         finally:
             event_queue.put(None)  # Sentinel: signals "stream is done"
 
@@ -277,49 +352,31 @@ async def stream_build(
         """
         Async generator that reads events from the queue and yields
         them as SSE-formatted strings to the browser.
-
-        The browser's EventSource API expects data in this format:
-            data: {"key": "value"}\n\n
-        Each message must end with two newlines.
-        Lines starting with ":" are comments (used as keepalives).
         """
-        # Start the pipeline in a background thread.
-        # "daemon=True" means the thread dies when the main program exits.
         thread = threading.Thread(target=run_pipeline, daemon=True)
         thread.start()
 
-        # Keep reading events from the queue until we get None (sentinel)
         while True:
             try:
-                # Try to get an event from the queue.
-                # "run_in_executor" makes this non-blocking so the async
-                # event loop isn't frozen while waiting.
-                # "timeout=0.5" = wait up to half a second before giving up.
                 event = await asyncio.get_event_loop().run_in_executor(
                     None, lambda: event_queue.get(timeout=0.5)
                 )
             except queue.Empty:
-                # No event available yet — send a keepalive comment.
-                # This prevents the browser from thinking the connection died.
                 yield ": keepalive\n\n"
                 continue
 
             if event is None:
-                break  # None = sentinel = pipeline is finished
+                break
 
-            # Convert the event dict to a JSON string and format as SSE
             yield f"data: {json.dumps(event)}\n\n"
 
-    # Return a StreamingResponse that sends SSE events to the browser.
-    # "media_type" tells the browser this is an event stream (not HTML).
-    # The headers prevent caching and buffering so events arrive instantly.
     return StreamingResponse(
         event_generator(),
         media_type="text/event-stream",
         headers={
-            "Cache-Control": "no-cache",       # Don't cache this stream
-            "Connection": "keep-alive",         # Keep the connection open
-            "X-Accel-Buffering": "no"           # Disable nginx buffering
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
         }
     )
 

@@ -1,5 +1,6 @@
-# LLM Client
+# LLM Clients
 anthropic>=0.42.0
+openai>=1.0.0
 
 # MCP SDK
 mcp>=1.0.0

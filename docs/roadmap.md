@@ -44,15 +44,19 @@ Improve agent intelligence, vault quality, and add new memory types.
 - [x] 3.6 Multi-provider LLM support (OpenRouter primary, Anthropic fallback)
 - [x] 3.7 Action Required vault tab with status badges and filter toggles
 - [x] 3.8 Reconciliation Agent (compare action items vs sent emails → Active/Closed/Expired)
-- [ ] 3.9 Memory confidence scoring and source attribution
-- [ ] 3.10 Query Agent context window optimization
+- [x] 3.9 Commitment status property (invited/confirmed/declined/tentative lifecycle tracking)
+- [x] 3.10 Eisenhower matrix UI (clickable 2x2 quadrant grid with live counts and filtering)
+- [x] 3.11 Vault UI polish (premium Eisenhower matrix, semantic status badges, category icon chips, stagger animations, enhanced content viewer)
+- [ ] 3.12 Memory confidence scoring and source attribution
+- [ ] 3.13 Query Agent context window optimization
 
 ## Phase 4: Polish & Deployment
 Production hardening, performance, and deployment.
 
-- [ ] 4.1 Rate limiting and error recovery improvements
-- [ ] 4.2 Multi-user support (separate vaults per account)
-- [ ] 4.3 Docker containerization
-- [ ] 4.4 Vault export/import (JSON, markdown zip)
-- [ ] 4.5 Background scheduled syncs
-- [ ] 4.6 Performance profiling and optimization
+- [x] 4.1 Build state persistence (page refresh reconnects to running build, not restart)
+- [ ] 4.2 Rate limiting and error recovery improvements
+- [ ] 4.3 Multi-user support (separate vaults per account)
+- [ ] 4.4 Docker containerization
+- [ ] 4.5 Vault export/import (JSON, markdown zip)
+- [ ] 4.6 Background scheduled syncs
+- [ ] 4.7 Performance profiling and optimization

@@ -4,7 +4,11 @@
 
 | Variable | Required | Default | Purpose |
 |----------|----------|---------|---------|
-| `ANTHROPIC_API_KEY` | Yes | — | Claude API key for all agent calls |
+| `OPENROUTER_API_KEY` | No* | — | OpenRouter API key (primary LLM provider) |
+| `OPENROUTER_MODEL` | No | `moonshotai/kimi-k2.5` | Model to use via OpenRouter |
+| `ANTHROPIC_API_KEY` | No* | — | Claude API key (fallback LLM provider) |
+
+*At least one of `OPENROUTER_API_KEY` or `ANTHROPIC_API_KEY` must be set.
 
 ## Config Settings (config/settings.py)
 
@@ -22,8 +26,11 @@
 
 | Setting | Default | Purpose |
 |---------|---------|---------|
-| `ANTHROPIC_API_KEY` | From env var | Claude API key |
-| `MODEL` | `claude-sonnet-4-20250514` | Claude model ID |
+| `OPENROUTER_API_KEY` | From env var | OpenRouter API key (primary) |
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenRouter API endpoint |
+| `OPENROUTER_MODEL` | `moonshotai/kimi-k2.5` | Model ID on OpenRouter |
+| `ANTHROPIC_API_KEY` | From env var | Anthropic API key (fallback) |
+| `ANTHROPIC_MODEL` | `claude-sonnet-4-20250514` | Claude model ID |
 | `MAX_TOKENS` | `4096` | Max response length per API call |
 
 ### Gmail Settings

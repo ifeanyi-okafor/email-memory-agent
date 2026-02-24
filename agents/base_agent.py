@@ -3,50 +3,322 @@
 # ============================================================================
 # WHAT THIS FILE DOES:
 # This is the "blueprint" for all AI agents in our system. Every agent
-# (Email Reader, Memory Writer, Query Agent) inherits from this class,
-# which means they all share this common logic.
+# (Email Reader, Memory Writer, Query Agent, Action Agent) inherits from
+# this class, which means they all share this common logic.
 #
 # The key thing this file implements is the "AGENTIC LOOP":
-#   1. We send a message to Claude (the AI)
-#   2. Claude thinks and might say: "I need to use a tool first"
-#   3. We run the tool and send the result back to Claude
-#   4. Claude thinks again — maybe uses another tool, or gives a final answer
-#   5. We return Claude's final text answer
+#   1. We send a message to the LLM (AI model)
+#   2. The LLM thinks and might say: "I need to use a tool first"
+#   3. We run the tool and send the result back to the LLM
+#   4. The LLM thinks again — maybe uses another tool, or gives a final answer
+#   5. We return the LLM's final text answer
 #
-# This loop is what makes an "agent" different from a simple chatbot.
-# A chatbot just responds. An agent can USE TOOLS to take actions —
-# like reading emails, searching files, or writing data.
+# MULTI-PROVIDER SUPPORT:
+#   This file supports two LLM providers:
+#     1. OpenRouter (default) — uses the OpenAI-compatible API format.
+#        Can route to many models (Kimi K2.5, GPT-4, etc.)
+#     2. Anthropic (fallback) — direct access to Claude models.
+#   If OpenRouter fails, the system automatically falls back to Anthropic.
+#
+#   The tricky part: OpenRouter uses OpenAI's message format (tool_calls,
+#   finish_reason, JSON string arguments), while our agent loop was built
+#   for Anthropic's format (content blocks, stop_reason, parsed dict input).
+#   We solve this with an "adapter" — wrapper classes that make OpenAI
+#   responses look like Anthropic responses, so the run() method doesn't
+#   need to change at all.
 # ============================================================================
 
 # ── IMPORTS ────────────────────────────────────────────────────────────
 
-# "os" lets us read environment variables (like the API key)
 import os
-
-# "time" lets us pause execution (for retry delays)
+import json
+import re
 import time
-
-# "random" is used to add jitter (randomness) to retry delays
 import random
 
-# "Anthropic" is the official Python client for talking to Claude.
-# It handles sending messages to Claude's API and receiving responses.
-# "APIStatusError" is raised when the API returns an error HTTP status code
-# (like 429 rate-limited or 529 overloaded).
+# Anthropic SDK (fallback provider)
 from anthropic import Anthropic, APIStatusError
 
+# OpenAI SDK (used for OpenRouter, which has an OpenAI-compatible API)
+from openai import OpenAI
 
-# ── SET UP THE CLAUDE CLIENT ──────────────────────────────────────────
 
-# Create a single Anthropic client that all agents will share.
-# It automatically reads the "ANTHROPIC_API_KEY" from your environment
-# variables (set in your .env file). No need to pass the key explicitly.
-client = Anthropic()
+# ── PROVIDER SETTINGS ───────────────────────────────────────────────────
+# Import from config so all settings live in one place.
 
-# "MODEL" is which version of Claude we'll use.
-# "claude-sonnet-4-20250514" is a great balance of intelligence and speed.
-# All agents in our system use the same model for consistency.
-MODEL = "claude-sonnet-4-20250514"
+from config.settings import (
+    OPENROUTER_API_KEY, OPENROUTER_BASE_URL, OPENROUTER_MODEL,
+    ANTHROPIC_API_KEY, ANTHROPIC_MODEL, MAX_TOKENS,
+)
+
+# Determine which provider is available.
+# OpenRouter is preferred (primary); Anthropic is the fallback.
+USE_OPENROUTER = bool(OPENROUTER_API_KEY)
+USE_ANTHROPIC = bool(ANTHROPIC_API_KEY)
+
+
+# ── SET UP LLM CLIENTS ─────────────────────────────────────────────────
+
+# OpenRouter client (primary) — uses the OpenAI SDK pointed at OpenRouter's URL.
+openrouter_client = None
+if USE_OPENROUTER:
+    openrouter_client = OpenAI(
+        base_url=OPENROUTER_BASE_URL,
+        api_key=OPENROUTER_API_KEY,
+    )
+
+# Anthropic client (fallback) — the original client.
+anthropic_client = None
+if USE_ANTHROPIC:
+    anthropic_client = Anthropic()
+
+# Log which providers are active at startup.
+if USE_OPENROUTER:
+    print(f"[LLM] Primary provider: OpenRouter ({OPENROUTER_MODEL})")
+if USE_ANTHROPIC:
+    label = "Fallback" if USE_OPENROUTER else "Primary"
+    print(f"[LLM] {label} provider: Anthropic ({ANTHROPIC_MODEL})")
+if not USE_OPENROUTER and not USE_ANTHROPIC:
+    print("[LLM] WARNING: No LLM API key configured! Set OPENROUTER_API_KEY or ANTHROPIC_API_KEY in .env")
+
+
+# ── ADAPTER CLASSES ─────────────────────────────────────────────────────
+# These make OpenAI-format responses look like Anthropic-format responses,
+# so the agentic loop (run method) doesn't need to know which provider
+# generated the response. This is the "adapter pattern."
+
+class _Block(dict):
+    """
+    A universal content block that mimics Anthropic's TextBlock / ToolUseBlock.
+
+    Anthropic responses contain a list of "blocks" in response.content.
+    Each block has a .type ("text" or "tool_use") and type-specific attributes.
+    This class recreates that interface for OpenAI responses.
+
+    Inherits from dict so it's JSON-serializable (Anthropic's SDK encoder
+    can handle dicts natively). Attribute access (block.type, block.text)
+    is supported via __getattr__ for compatibility with the agentic loop.
+    """
+    def __init__(self, block_type, **kwargs):
+        super().__init__(type=block_type, **kwargs)
+
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError:
+            raise AttributeError(f"_Block has no attribute '{name}'")
+
+
+def _sanitize_tool_id(tool_id):
+    """
+    Sanitize a tool call ID to be compatible with all providers.
+
+    Anthropic requires tool_use IDs to match ^[a-zA-Z0-9_-]+$ but some
+    providers (e.g., Kimi K2.5) generate IDs like "add_numbers:0" with colons.
+    We replace invalid characters with underscores.
+    """
+    return re.sub(r'[^a-zA-Z0-9_-]', '_', tool_id)
+
+
+class _ContentList(list):
+    """
+    A list subclass that can carry metadata about the original OpenAI message.
+
+    When we adapt an OpenAI response into Anthropic-style content blocks,
+    we lose provider-specific fields like Kimi K2.5's `reasoning` field.
+    By storing the raw OpenAI message dict on the list itself,
+    _messages_to_openai() can replay the exact original message instead
+    of reconstructing it from the blocks.
+    """
+    pass
+
+
+class _AdaptedResponse:
+    """
+    Makes an OpenAI chat completion response look like an Anthropic response.
+
+    Anthropic response has:
+        .stop_reason  — "end_turn" or "tool_use"
+        .content      — list of _Block objects (text and/or tool_use)
+
+    OpenAI response has:
+        .choices[0].finish_reason — "stop" or "tool_calls"
+        .choices[0].message.content — text string or None
+        .choices[0].message.tool_calls — list of tool call objects or None
+
+    This class bridges the gap.
+    """
+    def __init__(self, openai_response):
+        choice = openai_response.choices[0]
+        message = choice.message
+
+        # Convert finish_reason: OpenAI → Anthropic
+        if choice.finish_reason == "tool_calls":
+            self.stop_reason = "tool_use"
+        else:
+            self.stop_reason = "end_turn"
+
+        # Build the content blocks list (Anthropic format)
+        # Use _ContentList so we can carry the raw OpenAI message as metadata
+        self.content = _ContentList()
+
+        # Store the full message as a plain dict for later replay in
+        # _messages_to_openai(). model_dump() preserves extra fields like
+        # Kimi K2.5's `reasoning` and `reasoning_details` that the Pydantic
+        # model doesn't have as typed attributes.
+        msg_dict = message.model_dump()
+
+        # Sanitize tool IDs in the stored dict too, so they stay consistent
+        # with the _Block IDs used by run() for tool_results.
+        if msg_dict.get("tool_calls"):
+            for tc_dict in msg_dict["tool_calls"]:
+                tc_dict["id"] = _sanitize_tool_id(tc_dict["id"])
+
+        self.content._openai_message_dict = msg_dict
+
+        # Add text block if there's text content
+        if message.content:
+            self.content.append(_Block("text", text=message.content))
+
+        # Convert tool calls from OpenAI format to Anthropic-like blocks
+        if message.tool_calls:
+            for tc in message.tool_calls:
+                # OpenAI stores arguments as a JSON string; Anthropic uses a parsed dict
+                try:
+                    parsed_input = json.loads(tc.function.arguments)
+                except (json.JSONDecodeError, TypeError):
+                    parsed_input = {}
+
+                # Sanitize tool ID — some providers (Kimi K2.5) use characters
+                # like ":" that Anthropic rejects.
+                safe_id = _sanitize_tool_id(tc.id)
+
+                self.content.append(_Block(
+                    "tool_use",
+                    id=safe_id,
+                    name=tc.function.name,
+                    input=parsed_input,
+                ))
+
+
+# ── FORMAT CONVERSION HELPERS ───────────────────────────────────────────
+
+def _tools_to_openai(anthropic_tools):
+    """
+    Convert Anthropic tool definitions to OpenAI format.
+
+    Anthropic:  {"name": ..., "description": ..., "input_schema": {...}}
+    OpenAI:     {"type": "function", "function": {"name": ..., "description": ..., "parameters": {...}}}
+    """
+    if not anthropic_tools:
+        return []
+    openai_tools = []
+    for tool in anthropic_tools:
+        openai_tools.append({
+            "type": "function",
+            "function": {
+                "name": tool["name"],
+                "description": tool.get("description", ""),
+                "parameters": tool.get("input_schema", {"type": "object", "properties": {}}),
+            }
+        })
+    return openai_tools
+
+
+def _messages_to_openai(anthropic_messages):
+    """
+    Convert Anthropic-format conversation history to OpenAI format.
+
+    The tricky cases:
+    1. Assistant messages with content blocks (text + tool_use) → single message
+       with content string + tool_calls array.
+    2. User messages containing tool_results → split into separate "tool" role messages.
+    3. Regular user text messages → pass through unchanged.
+    """
+    openai_msgs = []
+
+    for msg in anthropic_messages:
+        role = msg["role"]
+        content = msg["content"]
+
+        if role == "user":
+            if isinstance(content, str):
+                # Simple text message — pass through
+                openai_msgs.append({"role": "user", "content": content})
+
+            elif isinstance(content, list):
+                # Could be tool results or mixed content
+                tool_results = []
+                text_parts = []
+
+                for item in content:
+                    if isinstance(item, dict) and item.get("type") == "tool_result":
+                        tool_results.append(item)
+                    elif isinstance(item, dict):
+                        text_parts.append(str(item.get("content", item)))
+                    else:
+                        text_parts.append(str(item))
+
+                # Emit tool results as separate "tool" role messages
+                for tr in tool_results:
+                    openai_msgs.append({
+                        "role": "tool",
+                        "tool_call_id": tr["tool_use_id"],
+                        "content": str(tr.get("content", "")),
+                    })
+
+                # Emit any remaining text as a user message
+                if text_parts and not tool_results:
+                    openai_msgs.append({"role": "user", "content": "\n".join(text_parts)})
+
+        elif role == "assistant":
+            if isinstance(content, str):
+                openai_msgs.append({"role": "assistant", "content": content})
+
+            elif isinstance(content, list):
+                # Fast path: if this content came from an OpenAI response (via
+                # _AdaptedResponse), replay the raw message dict directly. This
+                # preserves provider-specific fields like Kimi K2.5's `reasoning`
+                # and `reasoning_details` that don't exist in Anthropic's format.
+                raw_dict = getattr(content, '_openai_message_dict', None)
+                if raw_dict is not None:
+                    # Start from the raw dict — it already has content, tool_calls,
+                    # reasoning, reasoning_details, etc.
+                    rebuilt = {"role": "assistant"}
+                    for key, value in raw_dict.items():
+                        if key == "role":
+                            continue  # We set role ourselves
+                        if value is not None:
+                            rebuilt[key] = value
+                    openai_msgs.append(rebuilt)
+                    continue
+
+                # Slow path: reconstruct from Anthropic-native content blocks
+                text_parts = []
+                tool_calls = []
+
+                for block in content:
+                    block_type = getattr(block, 'type', None)
+                    if block_type == "text":
+                        text_parts.append(block.text)
+                    elif block_type == "tool_use":
+                        # block.input is a dict (both Anthropic and our _Block)
+                        tool_calls.append({
+                            "id": block.id,
+                            "type": "function",
+                            "function": {
+                                "name": block.name,
+                                "arguments": json.dumps(block.input),
+                            }
+                        })
+
+                assistant_msg = {"role": "assistant"}
+                assistant_msg["content"] = "\n".join(text_parts) if text_parts else None
+                if tool_calls:
+                    assistant_msg["tool_calls"] = tool_calls
+                openai_msgs.append(assistant_msg)
+
+    return openai_msgs
 
 
 # ── THE BASE AGENT CLASS ──────────────────────────────────────────────
@@ -55,14 +327,10 @@ class BaseAgent:
     """
     The shared foundation for all AI agents.
 
-    A "class" in Python is like a blueprint or template. When we create
-    an EmailReaderAgent, it's built FROM this BaseAgent blueprint, meaning
-    it automatically gets all the abilities defined here.
-
     Every agent has three things it must define:
-        1. system_prompt — A text instruction telling Claude what role to play
-        2. tools        — A list of tools (functions) the agent can use
-        3. execute_tool — The code that actually RUNS a tool when Claude asks
+        1. system_prompt — A text instruction telling the LLM what role to play
+        2. tools        — A list of tools the agent can use
+        3. execute_tool — The code that actually RUNS a tool when the LLM asks
 
     And every agent inherits one key ability from this class:
         - run()  — The agentic loop that sends messages, handles tool calls,
@@ -70,256 +338,228 @@ class BaseAgent:
     """
 
     def __init__(self):
-        """
-        Initialize the base agent with default values.
-
-        "__init__" is a special Python method called a "constructor."
-        It runs automatically whenever a new agent is created.
-        Think of it as the setup step when you first open an app.
-        """
-        # "self.system_prompt" tells Claude what persona/role to adopt.
-        # Each subclass (EmailReaderAgent, etc.) will override this with
-        # a specific prompt for its job. This is just the default.
         self.system_prompt = "You are a helpful assistant."
-
-        # "self.tools" is a list of tool definitions (schemas) that tell
-        # Claude what tools are available and how to use them.
-        # Each tool schema includes: name, description, and input parameters.
-        # Subclasses override this with their specific tools.
         self.tools = []
-
-        # "self.conversation_history" keeps track of all messages exchanged
-        # between the user/orchestrator and Claude during this session.
-        # This gives Claude "memory" within a single conversation.
         self.conversation_history = []
 
-        # "self.on_retry" is an optional callback that gets called before
-        # each retry wait. Callers (like the orchestrator) can set this to
-        # surface retry progress to the UI (e.g., "Retrying in 8s...").
+        # Optional callback for retry progress (e.g., for SSE streaming).
         # Signature: on_retry(attempt: int, max_retries: int, delay: float)
         self.on_retry = None
 
     def execute_tool(self, tool_name: str, tool_args: dict) -> str:
-        """
-        Run a tool and return its result.
-
-        This is a "placeholder" method. Subclasses MUST override it
-        with their own implementation that actually does something.
-        If a subclass forgets to override it, this will crash with
-        NotImplementedError — a helpful reminder.
-
-        Args:
-            tool_name: The name of the tool to run (e.g., "read_emails")
-            tool_args: The arguments to pass to the tool (e.g., {"max_results": 50})
-
-        Returns:
-            The tool's output as a string.
-        """
+        """Run a tool and return its result. Subclasses MUST override this."""
         raise NotImplementedError("Subclasses must implement execute_tool")
 
-    def _call_claude(self, on_retry=None) -> object:
+    # ── LLM CALL METHODS ─────────────────────────────────────────────
+
+    def _call_openrouter(self):
         """
-        Call the Claude API with automatic retry for transient errors.
+        Call the LLM via OpenRouter (OpenAI-compatible API) with retry logic.
 
-        When the API is overloaded (529) or rate-limited (429), this method
-        waits and retries with exponential backoff + jitter instead of crashing.
-
-        Exponential backoff means: wait 2s, then 4s, then 8s, then 16s, etc.
-        Jitter adds randomness (±25%) so multiple retries don't all fire at
-        the same moment — this prevents a "thundering herd" effect.
-
-        Args:
-            on_retry: Optional callback(attempt, max_retries, delay) called
-                     before each retry wait. Lets callers surface retry progress
-                     (e.g., to SSE stream or console).
-
-        Returns:
-            The Claude API response object.
-
-        Raises:
-            APIStatusError: If all retries are exhausted or a non-retryable error occurs.
+        Converts our Anthropic-format tools and messages to OpenAI format,
+        makes the API call, then wraps the response so it looks like an
+        Anthropic response (using _AdaptedResponse).
         """
-        # Import retry settings from config (avoids circular import at module level)
+        from config.settings import API_MAX_RETRIES, API_RETRY_BASE_DELAY
+
+        # Convert formats
+        openai_tools = _tools_to_openai(self.tools)
+        openai_messages = [{"role": "system", "content": self.system_prompt}]
+        openai_messages.extend(_messages_to_openai(self.conversation_history))
+
+        # Build the API call kwargs
+        kwargs = {
+            "model": OPENROUTER_MODEL,
+            "messages": openai_messages,
+            "max_tokens": MAX_TOKENS,
+        }
+        # Only include tools if the agent has any
+        if openai_tools:
+            kwargs["tools"] = openai_tools
+
+        for attempt in range(API_MAX_RETRIES):
+            try:
+                response = openrouter_client.chat.completions.create(**kwargs)
+                # Wrap in adapter so it looks like an Anthropic response
+                return _AdaptedResponse(response)
+
+            except Exception as e:
+                # Check for retryable HTTP errors (rate limit, server overload)
+                status_code = getattr(e, 'status_code', None)
+                is_retryable = status_code in (429, 502, 503, 529) if status_code else False
+                has_retries_left = attempt < API_MAX_RETRIES - 1
+
+                if is_retryable and has_retries_left:
+                    base_delay = API_RETRY_BASE_DELAY * (2 ** attempt)
+                    jitter = base_delay * 0.25 * (2 * random.random() - 1)
+                    delay = base_delay + jitter
+
+                    print(f"   [RETRY] OpenRouter {status_code} error, waiting {delay:.1f}s "
+                          f"(attempt {attempt + 1}/{API_MAX_RETRIES})")
+
+                    if self.on_retry:
+                        self.on_retry(attempt + 1, API_MAX_RETRIES, delay)
+
+                    time.sleep(delay)
+                else:
+                    raise
+
+        raise RuntimeError("OpenRouter retry loop exited unexpectedly")
+
+    def _call_anthropic(self):
+        """
+        Call the LLM via the Anthropic API with retry logic.
+
+        This is the original implementation — sends messages in Anthropic's
+        native format and returns the raw Anthropic response object.
+        """
         from config.settings import API_MAX_RETRIES, API_RETRY_BASE_DELAY
 
         for attempt in range(API_MAX_RETRIES):
             try:
-                return client.messages.create(
-                    model=MODEL,
-                    max_tokens=4096,
+                return anthropic_client.messages.create(
+                    model=ANTHROPIC_MODEL,
+                    max_tokens=MAX_TOKENS,
                     system=self.system_prompt,
                     tools=self.tools,
                     messages=self.conversation_history,
                 )
 
             except APIStatusError as e:
-                # Only retry on transient errors:
-                #   429 = rate limited (too many requests)
-                #   529 = overloaded (server at capacity)
                 is_retryable = e.status_code in (429, 529)
                 has_retries_left = attempt < API_MAX_RETRIES - 1
 
                 if is_retryable and has_retries_left:
-                    # Exponential backoff with jitter:
-                    # Base: 2s → 4s → 8s → 16s → 32s → 64s → 128s
-                    # Jitter: ±25% randomness to avoid thundering herd
                     base_delay = API_RETRY_BASE_DELAY * (2 ** attempt)
                     jitter = base_delay * 0.25 * (2 * random.random() - 1)
                     delay = base_delay + jitter
 
-                    print(f"   [RETRY] API {e.status_code} error, waiting {delay:.1f}s "
+                    print(f"   [RETRY] Anthropic {e.status_code} error, waiting {delay:.1f}s "
                           f"(attempt {attempt + 1}/{API_MAX_RETRIES})")
 
-                    # Notify caller about the retry (for SSE progress, etc.)
-                    if on_retry:
-                        on_retry(attempt + 1, API_MAX_RETRIES, delay)
+                    if self.on_retry:
+                        self.on_retry(attempt + 1, API_MAX_RETRIES, delay)
 
                     time.sleep(delay)
                 else:
-                    # Non-retryable error or out of retries — let it propagate
                     raise
 
-        # Should never reach here (the loop either returns or raises),
-        # but just in case:
-        raise RuntimeError("Retry loop exited unexpectedly")
+        raise RuntimeError("Anthropic retry loop exited unexpectedly")
+
+    def _call_llm(self):
+        """
+        Call the LLM with automatic provider fallback.
+
+        Strategy:
+          1. If OpenRouter is configured, try it first.
+          2. If OpenRouter fails and Anthropic is available, fall back.
+          3. If only Anthropic is configured, use it directly.
+
+        Both providers return responses in the same shape (Anthropic format)
+        thanks to the _AdaptedResponse wrapper, so the run() method doesn't
+        need to know which provider answered.
+        """
+        if USE_OPENROUTER and openrouter_client:
+            try:
+                return self._call_openrouter()
+            except Exception as e:
+                if USE_ANTHROPIC and anthropic_client:
+                    print(f"   [FALLBACK] OpenRouter failed ({e}). Switching to Anthropic.")
+                    return self._call_anthropic()
+                else:
+                    raise
+
+        if USE_ANTHROPIC and anthropic_client:
+            return self._call_anthropic()
+
+        raise RuntimeError(
+            "No LLM provider available. Set OPENROUTER_API_KEY or ANTHROPIC_API_KEY in .env"
+        )
+
+    # ── THE AGENTIC LOOP ─────────────────────────────────────────────
 
     def run(self, user_message: str, max_tool_rounds: int = 10) -> str:
         """
         THE AGENTIC LOOP — the heart of every agent.
 
-        This method sends a message to Claude and handles the back-and-forth
-        of tool usage until Claude produces a final text answer.
+        Sends a message to the LLM and handles the back-and-forth of tool
+        usage until the LLM produces a final text answer.
 
-        Here's the flow, step by step:
-
+        Flow:
         1. Add the user's message to conversation history
-        2. Send the full conversation + available tools to Claude
-        3. Claude responds with one of two things:
-           a) "tool_use" — Claude wants to call a tool first
-              → We run the tool, send the result back, and go to step 2
-           b) Final text — Claude has an answer
+        2. Send the full conversation + available tools to the LLM
+        3. The LLM responds with one of two things:
+           a) "tool_use" — it wants to call a tool first
+              → We run the tool, send the result back, and loop
+           b) Final text — it has an answer
               → We return it
-        4. Safety limit: if we've done 10 rounds of tool calls without
-           getting a final answer, we stop (prevents infinite loops)
-
-        Args:
-            user_message:    What the user (or orchestrator) is asking.
-            max_tool_rounds: Maximum number of tool-call rounds allowed.
-                            Default is 10 — more than enough for any task.
-
-        Returns:
-            str: Claude's final text response.
+        4. Safety limit: max_tool_rounds prevents infinite loops
         """
-
-        # ── Step 1: Add the user's message to history ──────────
-        # We keep the full conversation so Claude has context about
-        # what was said before (within this session).
+        # Step 1: Add the user's message to history
         self.conversation_history.append({
-            "role": "user",       # This message is from the "user"
-            "content": user_message  # The actual text
+            "role": "user",
+            "content": user_message,
         })
 
-        # ── Step 2-3: The loop ─────────────────────────────────
-        # We loop up to "max_tool_rounds" times. Each iteration is
-        # one round-trip with Claude.
+        # Step 2-3: The loop
         for round_num in range(max_tool_rounds):
 
-            # ── Call Claude (with automatic retry) ────────────
-            # _call_claude handles transient API errors (429/529)
-            # with exponential backoff, so we don't need try/except here.
-            # Pass self.on_retry so callers can surface retry progress.
-            response = self._call_claude(on_retry=self.on_retry)
+            # Call the LLM (with automatic provider fallback)
+            response = self._call_llm()
 
-            # ── Check: Does Claude want to use a tool? ─────────
-            # "stop_reason" tells us WHY Claude stopped generating.
-            # "tool_use" means Claude wants to call one or more tools
-            # before giving a final answer.
+            # Check: Does the LLM want to use a tool?
             if response.stop_reason == "tool_use":
 
-                # Add Claude's response (which contains tool_use blocks)
-                # to the conversation history so Claude remembers what it did
+                # Add the LLM's response to history
                 self.conversation_history.append({
                     "role": "assistant",
-                    "content": response.content  # May contain text + tool_use blocks
+                    "content": response.content,
                 })
 
-                # ── Execute each tool call ─────────────────────
-                # Claude might ask for multiple tools in one response.
-                # We loop through all the "blocks" in Claude's response
-                # and handle each tool_use block.
+                # Execute each tool call
                 tool_results = []
-
                 for block in response.content:
-                    # Check if this block is a tool call
                     if block.type == "tool_use":
                         print(f"   [TOOL] Calling tool: {block.name}")
 
                         try:
-                            # Run the tool using the subclass's execute_tool method.
-                            # "block.name" is the tool name (e.g., "read_emails")
-                            # "block.input" is the arguments dict (e.g., {"max_results": 50})
                             result = self.execute_tool(block.name, block.input)
-
-                            # Package the result in the format Claude expects
                             tool_results.append({
                                 "type": "tool_result",
-                                "tool_use_id": block.id,  # Links this result to the tool call
-                                "content": str(result)     # The tool's output as text
+                                "tool_use_id": block.id,
+                                "content": str(result),
                             })
-
                         except Exception as e:
-                            # If the tool crashes, tell Claude about the error
-                            # so it can try a different approach or report it.
                             tool_results.append({
                                 "type": "tool_result",
                                 "tool_use_id": block.id,
                                 "content": f"Error: {str(e)}",
-                                "is_error": True  # Flag this as an error result
+                                "is_error": True,
                             })
 
-                # ── Send tool results back to Claude ───────────
-                # Tool results go in a "user" message (that's how Claude's
-                # API works — tool results are sent as a user message).
+                # Send tool results back to the LLM
                 self.conversation_history.append({
                     "role": "user",
-                    "content": tool_results
+                    "content": tool_results,
                 })
-
-                # Now the loop continues — Claude will see the tool results
-                # and decide whether to use another tool or give a final answer.
 
             else:
-                # ── Claude gave a final text answer ────────────
-                # "stop_reason" is NOT "tool_use", which means Claude is
-                # done thinking and has produced its final response.
-
-                # Extract the text from Claude's response blocks.
-                # A response can contain multiple blocks (text, images, etc.)
-                # but we only want the text ones.
+                # The LLM gave a final text answer
                 final_text = ""
                 for block in response.content:
-                    if hasattr(block, 'text'):  # Check if this block has text
+                    if hasattr(block, 'text'):
                         final_text += block.text
 
-                # Add Claude's response to history (for future reference)
                 self.conversation_history.append({
                     "role": "assistant",
-                    "content": response.content
+                    "content": response.content,
                 })
 
-                # Return the final answer!
                 return final_text
 
-        # ── Safety net ─────────────────────────────────────────
-        # If we've gone through max_tool_rounds without getting a final
-        # answer, something is probably stuck in a loop. Return a warning.
+        # Safety net
         return "Agent reached maximum tool rounds without completing."
 
     def reset(self):
-        """
-        Clear the conversation history for a fresh start.
-
-        Call this between separate tasks so the agent doesn't get
-        confused by old context from a previous conversation.
-        """
+        """Clear the conversation history for a fresh start."""
         self.conversation_history = []

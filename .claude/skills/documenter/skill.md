@@ -43,7 +43,7 @@ Source of truth: **docs/roadmap.md**
 
 ## Part 2: Documentation
 
-Living docs live in `/docs`. Use Markdown with Mermaid diagrams. Docs must stay synced with code.
+Living docs live in `/docs`. Use Markdown with **Mermaid diagrams for all diagrams** (flowcharts, sequence diagrams, state diagrams, etc.). Never use ASCII art or image-based diagrams — always use Mermaid. Docs must stay synced with code.
 
 See [reference.md](reference.md) for the full doc file table (what each file covers, when to update it).
 
@@ -70,6 +70,7 @@ After a structural change, walk this list and update every affected file:
 - [ ] `config-map.md`
 - [ ] `dependency-graph.md`
 - [ ] `error-handling.md`
+- [ ] `agentic-architecture.md` (if any agent was added, removed, or had its role/tools/prompt changed — **always update the Tool Permission Matrix table** when tools are added/removed/reassigned)
 - [ ] `decisions/YYYY-MM-DD-title.md` (if an architectural decision was made)
 
 Not every change touches every file. Use judgment — but bias toward updating.

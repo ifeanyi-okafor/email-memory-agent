@@ -217,6 +217,8 @@ def write_memory(
     status: str = None,
     status_reason: str = None,
     status_updated: str = None,
+    # Commitment-specific fields (optional, only used when memory_type == 'commitments')
+    commitment_status: str = None,
     # People-specific fields (optional, only used when memory_type == 'people')
     name: str = None,
     role: str = None,
@@ -286,6 +288,8 @@ def write_memory(
             new_fm = {'tags': tags or [], 'related_to': related_to or []}
             if source_emails:
                 new_fm['source_emails'] = source_emails
+            if memory_type == 'commitments' and commitment_status:
+                new_fm['commitment_status'] = commitment_status
             merged_fm, merged_body = dedup_merge(duplicate_path, content, new_fm)
 
             # Preserve the merged tags/related_to for the write below
@@ -408,8 +412,42 @@ def write_memory(
 {content}
 """
 
+    elif memory_type == 'commitments':
+        # ── Commitment-specific frontmatter ─────────────────────
+        # Includes commitment_status to track participation lifecycle:
+        # invited → confirmed → declined/tentative
+        frontmatter = {
+            'title': title,
+            'date': today,
+            'category': 'commitments',
+            'memoryType': 'commitments',
+            'priority': priority,
+            'commitment_status': commitment_status or 'invited',
+            'tags': tags or [],
+            'related_to': related_to or [],
+        }
+        if source_emails:
+            frontmatter['source_emails'] = source_emails
+
+        # Build wiki-links section
+        wiki_links_section = ''
+        if related_to:
+            links = ', '.join([f'[[{entity}]]' for entity in related_to])
+            wiki_links_section = f'\n**Related:** {links}\n'
+
+        yaml_str = yaml.dump(frontmatter, default_flow_style=False, sort_keys=False)
+        file_content = f"""---
+{yaml_str.strip()}
+---
+
+# {title}
+
+{wiki_links_section}
+{content}
+"""
+
     else:
-        # ── Standard frontmatter for non-people memories ───────
+        # ── Standard frontmatter for other memory types (decisions, etc.) ──
         frontmatter = {
             'title': title,
             'date': today,
@@ -422,7 +460,7 @@ def write_memory(
         if source_emails:
             frontmatter['source_emails'] = source_emails
 
-        # Build wiki-links section for non-people memories
+        # Build wiki-links section
         wiki_links_section = ''
         if related_to:
             links = ', '.join([f'[[{entity}]]' for entity in related_to])
@@ -593,6 +631,7 @@ def list_memories(memory_type: str = None) -> list[dict]:
                     'status_reason': mem['frontmatter'].get('status_reason') if mtype == 'action_required' else None,
                     'quadrant': mem['frontmatter'].get('quadrant') if mtype == 'action_required' else None,
                     'deadline': mem['frontmatter'].get('deadline') if mtype == 'action_required' else None,
+                    'commitment_status': mem['frontmatter'].get('commitment_status') if mtype == 'commitments' else None,
                 })
 
     return memories

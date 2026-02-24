@@ -186,6 +186,16 @@ a {
     to   { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes vaultItemIn {
+    from { opacity: 0; transform: translateX(-6px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+    50%      { box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15); }
+}
+
 /* ============================================================================
    APP LAYOUT
    ============================================================================ */
@@ -1222,6 +1232,7 @@ a {
     overflow: hidden;
     border-right: 1px solid var(--border-soft);
     animation: contentIn 0.4s var(--ease-gentle) both;
+    position: relative;
 }
 
 .vault-col:last-child {
@@ -1230,15 +1241,15 @@ a {
 
 /* Column 1: Types */
 .vault-col-types {
-    width: 200px;
-    min-width: 200px;
+    width: 210px;
+    min-width: 210px;
     background: var(--bg-secondary);
 }
 
 /* Column 2: Items list */
 .vault-col-items {
-    width: 280px;
-    min-width: 280px;
+    width: 290px;
+    min-width: 290px;
     background: var(--bg-primary);
 }
 
@@ -1251,104 +1262,197 @@ a {
 
 /* Column headers */
 .vault-col-header {
-    padding: 18px 16px 14px;
+    padding: 20px 16px 14px;
     border-bottom: 1px solid var(--border-soft);
     flex-shrink: 0;
 }
 
 .vault-col-header h2 {
     font-family: var(--font-serif);
-    font-size: 14px;
+    font-size: 15px;
     font-weight: 500;
     color: var(--text-primary);
     line-height: 1.3;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    letter-spacing: -0.01em;
 }
 
 /* Column scrollable lists */
 .vault-col-list {
     flex: 1;
     overflow-y: auto;
-    padding: 6px 8px;
+    padding: 8px 8px;
+}
+
+/* Smooth custom scrollbar for vault columns */
+.vault-col-list::-webkit-scrollbar {
+    width: 5px;
+}
+.vault-col-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+.vault-col-list::-webkit-scrollbar-thumb {
+    background: rgba(44, 42, 39, 0.10);
+    border-radius: 10px;
+}
+.vault-col-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(44, 42, 39, 0.18);
 }
 
 /* ---- Tree items (column 1) ---- */
 .vault-tree-item {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     width: 100%;
-    padding: 10px 12px;
-    border-radius: 8px;
+    padding: 12px 14px;
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.18s var(--ease-gentle);
+    transition: all 0.25s var(--ease-gentle);
     text-align: left;
     font-family: var(--font-sans);
     font-size: 13px;
     color: var(--text-secondary);
     background: none;
-    border: none;
+    border: 1.5px solid transparent;
+    position: relative;
+    margin-bottom: 2px;
 }
 
 .vault-tree-item:hover {
-    background: var(--surface-warm);
+    background: rgba(255, 255, 255, 0.6);
     color: var(--text-primary);
+    border-color: var(--border-soft);
+    transform: translateX(2px);
 }
 
 .vault-tree-item.active {
-    background: var(--accent-sage-glow);
+    background: rgba(255, 255, 255, 0.85);
     color: var(--accent-sage-deep);
     font-weight: 500;
+    border-color: rgba(123, 158, 135, 0.20);
+    box-shadow: 0 2px 8px rgba(123, 158, 135, 0.08);
 }
 
 .vault-tree-icon {
-    width: 18px;
-    min-width: 18px;
-    font-size: 15px;
-    text-align: center;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 13px;
+    transition: all 0.25s var(--ease-gentle);
+}
+
+/* Per-type icon backgrounds */
+.vault-tree-item[data-type="people"] .vault-tree-icon {
+    background: rgba(196, 149, 106, 0.12);
+    color: var(--accent-warm);
+}
+.vault-tree-item[data-type="commitments"] .vault-tree-icon {
+    background: rgba(92, 122, 175, 0.12);
+    color: var(--accent-blue);
+}
+.vault-tree-item[data-type="decisions"] .vault-tree-icon {
+    background: rgba(123, 158, 135, 0.12);
+    color: var(--accent-sage);
+}
+.vault-tree-item[data-type="action_required"] .vault-tree-icon {
+    background: rgba(229, 57, 53, 0.08);
+    color: #E53935;
+}
+
+.vault-tree-item.active .vault-tree-icon {
+    transform: scale(1.05);
 }
 
 .vault-tree-label {
     flex: 1;
+    font-weight: inherit;
+    letter-spacing: -0.005em;
 }
 
 .vault-tree-count {
     font-family: var(--font-mono);
     font-size: 11px;
+    font-weight: 500;
     color: var(--text-tertiary);
-    min-width: 20px;
-    text-align: right;
+    min-width: 24px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-full);
+    background: var(--surface-warm);
+    transition: all 0.25s var(--ease-gentle);
 }
 
 .vault-tree-item.active .vault-tree-count {
-    color: var(--accent-sage);
+    background: rgba(123, 158, 135, 0.15);
+    color: var(--accent-sage-deep);
+}
+
+.vault-tree-item[data-type="action_required"].active .vault-tree-count {
+    background: rgba(229, 57, 53, 0.10);
+    color: #E53935;
 }
 
 /* ---- File items (column 2) ---- */
 .vault-file-item {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
     width: 100%;
-    padding: 10px 12px;
-    border-radius: 8px;
+    padding: 11px 14px 11px 16px;
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.18s var(--ease-gentle);
+    transition: all 0.25s var(--ease-gentle);
     text-align: left;
-    background: none;
-    border: none;
+    background: transparent;
+    border: 1.5px solid transparent;
     font-family: var(--font-sans);
+    position: relative;
+    margin-bottom: 1px;
+}
+
+/* Subtle left accent per type — injected via JS data attribute */
+.vault-file-item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 0;
+    border-radius: 0 2px 2px 0;
+    background: var(--accent-sage);
+    transition: height 0.25s var(--ease-gentle);
+    opacity: 0;
 }
 
 .vault-file-item:hover {
-    background: var(--surface-warm);
+    background: rgba(255, 255, 255, 0.5);
+    border-color: var(--border-soft);
+}
+
+.vault-file-item:hover::before {
+    height: 60%;
+    opacity: 0.5;
 }
 
 .vault-file-item.active {
     background: var(--bg-chat);
-    box-shadow: var(--shadow-soft);
+    border-color: rgba(123, 158, 135, 0.18);
+    box-shadow: 0 2px 10px rgba(44, 42, 39, 0.05);
+}
+
+.vault-file-item.active::before {
+    height: 70%;
+    opacity: 1;
 }
 
 .vault-file-title {
@@ -1358,49 +1462,114 @@ a {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.3;
 }
 
 .vault-file-item.active .vault-file-title {
-    font-weight: 500;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .vault-file-date {
     font-family: var(--font-mono);
     font-size: 10px;
     color: var(--text-tertiary);
+    letter-spacing: 0.02em;
 }
 
+/* ---- Status Badges ---- */
 .vault-status-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-size: 10px;
     font-weight: 600;
     font-family: var(--font-sans);
-    padding: 1px 8px;
+    padding: 2px 10px;
     border-radius: var(--radius-full);
-    letter-spacing: 0.02em;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
+    width: fit-content;
+    line-height: 1.4;
+}
+
+/* Status dot before badge */
+.vault-status-badge::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
 }
 
 .vault-status-badge.status-active {
-    background: rgba(76, 175, 80, 0.12);
+    background: rgba(76, 175, 80, 0.10);
     color: #2E7D32;
+}
+.vault-status-badge.status-active::before {
+    background: #4CAF50;
+    box-shadow: 0 0 4px rgba(76, 175, 80, 0.4);
+    animation: pulseGlow 2.5s ease-in-out infinite;
 }
 
 .vault-status-badge.status-closed {
-    background: rgba(158, 158, 158, 0.12);
+    background: rgba(158, 158, 158, 0.10);
     color: #757575;
+}
+.vault-status-badge.status-closed::before {
+    background: #9E9E9E;
 }
 
 .vault-status-badge.status-expired {
-    background: rgba(255, 167, 38, 0.12);
+    background: rgba(255, 167, 38, 0.10);
     color: #E65100;
 }
+.vault-status-badge.status-expired::before {
+    background: #FFA726;
+    box-shadow: 0 0 4px rgba(255, 167, 38, 0.4);
+}
+
+.vault-status-badge.commitment-invited {
+    background: rgba(255, 193, 7, 0.10);
+    color: #F57F17;
+}
+.vault-status-badge.commitment-invited::before {
+    background: #FFC107;
+}
+
+.vault-status-badge.commitment-confirmed {
+    background: rgba(76, 175, 80, 0.10);
+    color: #2E7D32;
+}
+.vault-status-badge.commitment-confirmed::before {
+    background: #4CAF50;
+    box-shadow: 0 0 4px rgba(76, 175, 80, 0.4);
+}
+
+.vault-status-badge.commitment-declined {
+    background: rgba(158, 158, 158, 0.10);
+    color: #757575;
+}
+.vault-status-badge.commitment-declined::before {
+    background: #9E9E9E;
+}
+
+.vault-status-badge.commitment-tentative {
+    background: rgba(100, 130, 180, 0.10);
+    color: #3F51B5;
+}
+.vault-status-badge.commitment-tentative::before {
+    background: #5C7AAF;
+}
+
+/* ---- Status Filter Pills ---- */
 
 .vault-filter-bar {
     display: none;
-    gap: 4px;
-    padding: 0 12px 8px;
+    gap: 6px;
+    padding: 4px 14px 10px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .vault-filter-bar.visible {
@@ -1411,30 +1580,297 @@ a {
     font-family: var(--font-sans);
     font-size: 11px;
     font-weight: 500;
-    padding: 3px 10px;
+    padding: 5px 14px;
     border-radius: var(--radius-full);
-    border: 1px solid var(--border-medium);
-    background: none;
+    border: 1.5px solid var(--border-medium);
+    background: transparent;
     color: var(--text-secondary);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.25s var(--ease-gentle);
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 0.01em;
+}
+
+.vault-filter-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: currentColor;
+    opacity: 0;
+    transition: opacity 0.25s var(--ease-gentle);
 }
 
 .vault-filter-btn:hover {
-    background: var(--surface-warm);
+    border-color: var(--accent-sage-soft);
+    color: var(--accent-sage-deep);
+    transform: translateY(-1px);
+}
+
+.vault-filter-btn:hover::before {
+    opacity: 0.04;
 }
 
 .vault-filter-btn.active {
-    background: var(--accent-sage-glow);
-    color: var(--accent-sage-deep);
-    border-color: var(--accent-sage-soft);
+    background: var(--accent-sage-deep);
+    color: #fff;
+    border-color: var(--accent-sage-deep);
+    box-shadow: 0 2px 8px rgba(92, 128, 104, 0.25);
+    font-weight: 600;
+}
+
+.vault-filter-btn.active:hover {
+    transform: none;
+    color: #fff;
+}
+
+.vault-filter-btn[data-filter="active"].active {
+    background: #2E7D32;
+    border-color: #2E7D32;
+    box-shadow: 0 2px 8px rgba(46, 125, 50, 0.25);
+}
+
+.vault-filter-btn[data-filter="closed"].active {
+    background: #757575;
+    border-color: #757575;
+    box-shadow: 0 2px 8px rgba(117, 117, 117, 0.25);
+}
+
+.vault-filter-btn[data-filter="expired"].active {
+    background: #E65100;
+    border-color: #E65100;
+    box-shadow: 0 2px 8px rgba(230, 81, 0, 0.25);
+}
+
+/* ---- Eisenhower Matrix Grid ---- */
+
+.vault-eisenhower-matrix {
+    display: none;
+    padding: 6px 14px 12px;
+}
+
+.vault-eisenhower-matrix.visible {
+    display: block;
+}
+
+/* Axis labels */
+.eisenhower-axis-labels {
+    display: grid;
+    grid-template-columns: auto 1fr 1fr;
+    grid-template-rows: auto 1fr 1fr;
+    gap: 0;
+    margin-bottom: 2px;
+}
+
+.eisenhower-axis-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.eisenhower-axis-top {
+    grid-column: 2 / 4;
+    grid-row: 1;
+    padding-bottom: 5px;
+    gap: 4px;
+}
+
+.eisenhower-axis-top::before {
+    content: '';
+    width: 16px;
+    height: 1px;
+    background: var(--text-tertiary);
+    opacity: 0.4;
+}
+
+.eisenhower-axis-top::after {
+    content: '';
+    width: 16px;
+    height: 1px;
+    background: var(--text-tertiary);
+    opacity: 0.4;
+}
+
+.eisenhower-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+}
+
+.eisenhower-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 6px 8px;
+    border-radius: 10px;
+    border: 1.5px solid transparent;
+    cursor: pointer;
+    transition: all 0.3s var(--ease-gentle);
+    text-align: center;
+    min-height: 60px;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Subtle background gradient per quadrant */
+.eisenhower-cell::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 1;
+    transition: opacity 0.3s var(--ease-gentle);
+    z-index: 0;
+}
+
+.eisenhower-cell > * {
+    position: relative;
+    z-index: 1;
+}
+
+.eisenhower-cell:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.eisenhower-cell.active {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.10);
+}
+
+.eq-label {
+    font-family: var(--font-sans);
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+}
+
+.eq-desc {
+    font-family: var(--font-sans);
+    font-size: 9px;
+    line-height: 1.2;
+    margin-top: 2px;
+    opacity: 0.7;
+}
+
+.eq-count {
+    font-family: var(--font-mono);
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 3px;
+    line-height: 1;
+}
+
+/* ── Q1: Do First (red) ── */
+.eq-urgent-important {
+    background: linear-gradient(135deg, rgba(229, 57, 53, 0.06), rgba(229, 57, 53, 0.02));
+    border-color: rgba(229, 57, 53, 0.15);
+}
+.eq-urgent-important .eq-label { color: #C62828; }
+.eq-urgent-important .eq-desc  { color: #C62828; }
+.eq-urgent-important .eq-count { color: #E53935; }
+.eq-urgent-important:hover {
+    background: linear-gradient(135deg, rgba(229, 57, 53, 0.10), rgba(229, 57, 53, 0.04));
+    border-color: rgba(229, 57, 53, 0.30);
+}
+.eq-urgent-important.active {
+    background: linear-gradient(135deg, rgba(229, 57, 53, 0.14), rgba(229, 57, 53, 0.06));
+    border-color: rgba(229, 57, 53, 0.40);
+    box-shadow: 0 4px 16px rgba(229, 57, 53, 0.12);
+}
+
+/* ── Q2: Schedule (sage/green) ── */
+.eq-important-not-urgent {
+    background: linear-gradient(135deg, rgba(92, 128, 104, 0.06), rgba(92, 128, 104, 0.02));
+    border-color: rgba(92, 128, 104, 0.15);
+}
+.eq-important-not-urgent .eq-label { color: var(--accent-sage-deep); }
+.eq-important-not-urgent .eq-desc  { color: var(--accent-sage-deep); }
+.eq-important-not-urgent .eq-count { color: var(--accent-sage); }
+.eq-important-not-urgent:hover {
+    background: linear-gradient(135deg, rgba(92, 128, 104, 0.10), rgba(92, 128, 104, 0.04));
+    border-color: rgba(92, 128, 104, 0.30);
+}
+.eq-important-not-urgent.active {
+    background: linear-gradient(135deg, rgba(92, 128, 104, 0.14), rgba(92, 128, 104, 0.06));
+    border-color: rgba(92, 128, 104, 0.40);
+    box-shadow: 0 4px 16px rgba(92, 128, 104, 0.12);
+}
+
+/* ── Q3: Delegate (amber/warm) ── */
+.eq-urgent-not-important {
+    background: linear-gradient(135deg, rgba(196, 149, 106, 0.08), rgba(196, 149, 106, 0.02));
+    border-color: rgba(196, 149, 106, 0.15);
+}
+.eq-urgent-not-important .eq-label { color: #A1714C; }
+.eq-urgent-not-important .eq-desc  { color: #A1714C; }
+.eq-urgent-not-important .eq-count { color: var(--accent-warm); }
+.eq-urgent-not-important:hover {
+    background: linear-gradient(135deg, rgba(196, 149, 106, 0.12), rgba(196, 149, 106, 0.04));
+    border-color: rgba(196, 149, 106, 0.30);
+}
+.eq-urgent-not-important.active {
+    background: linear-gradient(135deg, rgba(196, 149, 106, 0.16), rgba(196, 149, 106, 0.06));
+    border-color: rgba(196, 149, 106, 0.40);
+    box-shadow: 0 4px 16px rgba(196, 149, 106, 0.12);
+}
+
+/* ── Q4: Eliminate (neutral) ── */
+.eq-neither {
+    background: linear-gradient(135deg, rgba(158, 152, 145, 0.06), rgba(158, 152, 145, 0.02));
+    border-color: rgba(158, 152, 145, 0.15);
+}
+.eq-neither .eq-label { color: var(--text-secondary); }
+.eq-neither .eq-desc  { color: var(--text-secondary); }
+.eq-neither .eq-count { color: var(--text-tertiary); }
+.eq-neither:hover {
+    background: linear-gradient(135deg, rgba(158, 152, 145, 0.10), rgba(158, 152, 145, 0.04));
+    border-color: rgba(158, 152, 145, 0.30);
+}
+.eq-neither.active {
+    background: linear-gradient(135deg, rgba(158, 152, 145, 0.14), rgba(158, 152, 145, 0.06));
+    border-color: rgba(158, 152, 145, 0.40);
+    box-shadow: 0 4px 16px rgba(158, 152, 145, 0.10);
+}
+
+/* ── Clear button ── */
+.eisenhower-clear {
+    display: none;
+    width: 100%;
+    margin-top: 6px;
+    padding: 5px 0;
+    border: none;
+    background: none;
+    font-family: var(--font-sans);
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s var(--ease-gentle);
+    border-radius: var(--radius-full);
+}
+
+.eisenhower-clear:hover {
+    color: var(--text-primary);
+    background: var(--surface-warm);
 }
 
 .vault-file-tags {
     display: flex;
-    gap: 4px;
+    gap: 5px;
     flex-wrap: wrap;
-    margin-top: 2px;
+    margin-top: 4px;
 }
 
 /* Inline search in column 2 header */
@@ -1455,31 +1891,33 @@ a {
 
 .vault-search-sm {
     width: 100%;
-    padding: 7px 10px 7px 30px;
-    border: 1px solid var(--border-soft);
-    border-radius: 8px;
+    padding: 8px 12px 8px 32px;
+    border: 1.5px solid var(--border-soft);
+    border-radius: 10px;
     font-family: var(--font-sans);
     font-size: 12px;
     color: var(--text-primary);
     background: var(--bg-chat);
-    transition: all 0.2s var(--ease-gentle);
+    transition: all 0.25s var(--ease-gentle);
 }
 
 .vault-search-sm:focus {
     border-color: var(--accent-sage-soft);
-    box-shadow: 0 0 0 2px var(--accent-sage-glow);
+    box-shadow: 0 0 0 3px var(--accent-sage-glow);
     outline: none;
+    background: #fff;
 }
 
 .vault-search-sm::placeholder {
     color: var(--text-tertiary);
+    font-style: italic;
 }
 
 /* ---- Content viewer (column 3) ---- */
 .vault-content-body {
     flex: 1;
     overflow-y: auto;
-    padding: 24px 32px;
+    padding: 28px 36px;
     position: relative;
 }
 
@@ -1490,90 +1928,182 @@ a {
     justify-content: center;
     height: 100%;
     text-align: center;
-    padding: 40px;
+    padding: 48px;
+}
+
+.vault-content-empty i {
+    opacity: 0.25 !important;
+    transition: opacity 0.3s var(--ease-gentle);
 }
 
 .vault-content-meta {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-top: 8px;
+    margin-top: 10px;
 }
 
 .vault-content-meta span {
     font-family: var(--font-mono);
-    font-size: 11px;
-    padding: 3px 8px;
+    font-size: 10.5px;
+    padding: 4px 10px;
     background: var(--surface-warm);
     border-radius: var(--radius-full);
     color: var(--text-secondary);
+    border: 1px solid var(--border-soft);
+    transition: all 0.2s var(--ease-gentle);
+    letter-spacing: 0.01em;
+}
+
+.vault-content-meta span:hover {
+    background: rgba(123, 158, 135, 0.08);
+    border-color: rgba(123, 158, 135, 0.15);
+    color: var(--text-primary);
+}
+
+/* Semantic meta badge colors based on content */
+.vault-content-meta .meta-quadrant {
+    background: rgba(229, 57, 53, 0.06);
+    border-color: rgba(229, 57, 53, 0.12);
+    color: #C62828;
+}
+
+.vault-content-meta .meta-status-active {
+    background: rgba(76, 175, 80, 0.08);
+    border-color: rgba(76, 175, 80, 0.15);
+    color: #2E7D32;
+}
+
+.vault-content-meta .meta-status-closed {
+    background: rgba(158, 158, 158, 0.08);
+    border-color: rgba(158, 158, 158, 0.15);
+    color: #757575;
+}
+
+.vault-content-meta .meta-status-expired {
+    background: rgba(255, 167, 38, 0.08);
+    border-color: rgba(255, 167, 38, 0.15);
+    color: #E65100;
+}
+
+.vault-content-meta .meta-deadline {
+    background: rgba(196, 149, 106, 0.08);
+    border-color: rgba(196, 149, 106, 0.15);
+    color: #A1714C;
 }
 
 /* Rendered markdown in column 3 */
 .vault-rendered-md {
-    line-height: 1.75;
+    line-height: 1.8;
     font-size: 14px;
     color: var(--text-primary);
+    animation: contentIn 0.3s var(--ease-gentle) both;
 }
 
 .vault-rendered-md h2 {
     font-family: var(--font-serif);
     font-size: 20px;
     font-weight: 500;
-    margin: 20px 0 10px;
+    margin: 24px 0 12px;
     color: var(--text-primary);
+    letter-spacing: -0.01em;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border-soft);
 }
 
 .vault-rendered-md h3 {
     font-family: var(--font-serif);
     font-size: 16px;
     font-weight: 500;
-    margin: 16px 0 8px;
+    margin: 20px 0 8px;
+    color: var(--text-primary);
 }
 
 .vault-rendered-md h4 {
     font-family: var(--font-serif);
     font-size: 14px;
-    font-weight: 500;
-    margin: 12px 0 6px;
+    font-weight: 600;
+    margin: 16px 0 6px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-size: 12px;
 }
 
 .vault-rendered-md p {
-    margin-bottom: 10px;
+    margin-bottom: 12px;
 }
 
 .vault-rendered-md strong {
     font-weight: 600;
+    color: var(--text-primary);
 }
 
 .vault-rendered-md em {
     font-style: italic;
+    color: var(--text-secondary);
 }
 
 .vault-rendered-md code {
     font-family: var(--font-mono);
     font-size: 12px;
     background: var(--surface-warm);
-    padding: 2px 6px;
-    border-radius: 4px;
+    padding: 2px 7px;
+    border-radius: 5px;
+    border: 1px solid var(--border-soft);
+}
+
+.vault-rendered-md ul, .vault-rendered-md ol {
+    padding-left: 20px;
+    margin-bottom: 12px;
+}
+
+.vault-rendered-md li {
+    margin-bottom: 4px;
+}
+
+.vault-rendered-md blockquote {
+    border-left: 3px solid var(--accent-sage-soft);
+    margin: 16px 0;
+    padding: 10px 16px;
+    background: rgba(123, 158, 135, 0.04);
+    border-radius: 0 8px 8px 0;
+    color: var(--text-secondary);
+    font-style: italic;
 }
 
 .wiki-link {
     color: var(--accent-sage-deep);
     font-weight: 500;
-    text-decoration: underline;
-    text-decoration-style: dotted;
-    text-underline-offset: 2px;
-    text-decoration-color: var(--accent-sage-soft);
+    text-decoration: none;
+    background: rgba(123, 158, 135, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+    transition: all 0.2s var(--ease-gentle);
+    border-bottom: 1.5px solid var(--accent-sage-soft);
+}
+
+.wiki-link:hover {
+    background: rgba(123, 158, 135, 0.15);
+    color: var(--accent-sage-deep);
 }
 
 .tag {
     font-family: var(--font-mono);
     font-size: 10px;
-    padding: 2px 8px;
+    padding: 3px 9px;
     border-radius: var(--radius-full);
     background: var(--surface-warm);
     color: var(--text-secondary);
+    border: 1px solid var(--border-soft);
+    transition: all 0.2s var(--ease-gentle);
+    letter-spacing: 0.01em;
+}
+
+.vault-file-tags .tag:hover {
+    background: rgba(123, 158, 135, 0.08);
+    border-color: rgba(123, 158, 135, 0.15);
+    color: var(--accent-sage-deep);
 }
 
 .type-badge {
@@ -1581,25 +2111,35 @@ a {
     font-size: 10px;
     font-weight: 500;
     text-transform: uppercase;
-    padding: 3px 8px;
+    padding: 3px 10px;
     border-radius: var(--radius-full);
     letter-spacing: 0.05em;
     display: inline-block;
+    border: 1px solid transparent;
 }
 
 .type-badge.decisions {
-    background: rgba(123, 158, 135, 0.15);
+    background: rgba(123, 158, 135, 0.12);
+    border-color: rgba(123, 158, 135, 0.15);
     color: var(--accent-sage-deep);
 }
 
 .type-badge.people {
-    background: rgba(196, 149, 106, 0.15);
+    background: rgba(196, 149, 106, 0.12);
+    border-color: rgba(196, 149, 106, 0.15);
     color: var(--accent-warm);
 }
 
 .type-badge.commitments {
-    background: var(--accent-blue-glow);
+    background: rgba(92, 122, 175, 0.12);
+    border-color: rgba(92, 122, 175, 0.15);
     color: var(--accent-blue);
+}
+
+.type-badge.action_required {
+    background: rgba(229, 57, 53, 0.08);
+    border-color: rgba(229, 57, 53, 0.12);
+    color: #C62828;
 }
 
 /* ============================================================================
@@ -2380,6 +2920,34 @@ a {
                         <button class="vault-filter-btn" data-filter="closed" onclick="setStatusFilter('closed', this)">Closed</button>
                         <button class="vault-filter-btn" data-filter="expired" onclick="setStatusFilter('expired', this)">Expired</button>
                     </div>
+                    <div class="vault-eisenhower-matrix" id="vaultEisenhowerMatrix">
+                        <div class="eisenhower-axis-label eisenhower-axis-top">Urgent &rarr;</div>
+                        <div class="eisenhower-grid">
+                            <button class="eisenhower-cell eq-urgent-important" data-quadrant="urgent-important" onclick="setQuadrantFilter('urgent-important', this)">
+                                <span class="eq-count" id="eqCountUI">0</span>
+                                <span class="eq-label">Do First</span>
+                                <span class="eq-desc">Urgent &amp; Important</span>
+                            </button>
+                            <button class="eisenhower-cell eq-important-not-urgent" data-quadrant="important-not-urgent" onclick="setQuadrantFilter('important-not-urgent', this)">
+                                <span class="eq-count" id="eqCountINU">0</span>
+                                <span class="eq-label">Schedule</span>
+                                <span class="eq-desc">Important, Not Urgent</span>
+                            </button>
+                            <button class="eisenhower-cell eq-urgent-not-important" data-quadrant="urgent-not-important" onclick="setQuadrantFilter('urgent-not-important', this)">
+                                <span class="eq-count" id="eqCountUNI">0</span>
+                                <span class="eq-label">Delegate</span>
+                                <span class="eq-desc">Urgent, Not Important</span>
+                            </button>
+                            <button class="eisenhower-cell eq-neither" data-quadrant="neither" onclick="setQuadrantFilter('neither', this)">
+                                <span class="eq-count" id="eqCountN">0</span>
+                                <span class="eq-label">Eliminate</span>
+                                <span class="eq-desc">Neither</span>
+                            </button>
+                        </div>
+                        <button class="eisenhower-clear" id="eqClearBtn" onclick="clearQuadrantFilter()">
+                            <i class="fa-solid fa-xmark" aria-hidden="true"></i> Clear filter
+                        </button>
+                    </div>
                 </div>
                 <div class="vault-col-list" id="vaultItemList">
                     <p class="empty-state">Choose a category to browse</p>
@@ -2394,8 +2962,11 @@ a {
                 </div>
                 <div class="vault-content-body" id="vaultContentBody">
                     <div class="vault-content-empty">
-                        <i class="fa-regular fa-file-lines" aria-hidden="true" style="font-size:48px;color:var(--text-tertiary);opacity:0.4;margin-bottom:12px"></i>
-                        <p class="empty-state">Select a memory to view its content</p>
+                        <div style="width:64px;height:64px;border-radius:16px;background:var(--surface-warm);display:flex;align-items:center;justify-content:center;margin-bottom:16px">
+                            <i class="fa-regular fa-file-lines" aria-hidden="true" style="font-size:28px;color:var(--text-tertiary);opacity:0.5"></i>
+                        </div>
+                        <p class="empty-state" style="font-style:normal;font-weight:500;color:var(--text-secondary)">Select a memory</p>
+                        <p class="empty-state" style="font-size:12px;margin-top:4px">Choose an item from the list to view its contents</p>
                     </div>
                 </div>
             </div>
@@ -2719,8 +3290,8 @@ a {
         messageInput.focus();
         updatePanelOpenBtnVisibility();
         checkAuthStatus();
-        // Auto-sync emails in background on every app load
-        startIncrementalBuild();
+        // Check backend build state — only start a new build if idle
+        checkAndRestoreBuildState();
     }
 
     function showLoginPage() {
@@ -2750,12 +3321,17 @@ a {
         } catch (e) { /* silent */ }
     }
 
-    function startIncrementalBuild() {
-        // Auto-process newest emails in background, skipping already-processed
-        var url = '/api/stream/build?days_back=180&max_emails=500&gmail_query=';
-        var source = new EventSource(url);
+    // ── UNIFIED BUILD STATE SYSTEM ─────────────────────────────────────
+    // All build indicators (sidebar, home, profile) are driven by this
+    // shared state. The backend tracks build state so page refreshes can
+    // reconnect instead of restarting the pipeline.
 
-        // ── UI elements ──
+    var STAGE_ORDER = ['fetching', 'email_reader', 'memory_writer',
+                       'graph_rebuild', 'action_agent', 'reconciliation'];
+    var TOTAL_STEPS = STAGE_ORDER.length;
+
+    function updateAllBuildIndicators(state, msg, step) {
+        // state: 'active' | 'done' | 'error' | 'hidden'
         var indicator = document.getElementById('buildIndicator');
         var indicatorText = document.getElementById('buildIndicatorText');
         var indicatorStep = document.getElementById('buildIndicatorStep');
@@ -2763,75 +3339,195 @@ a {
         var homeMsg = document.getElementById('homeBuildMessage');
         var homeStep = document.getElementById('homeBuildStep');
 
-        // Show both indicators
-        if (indicator) indicator.classList.add('active');
-        if (homeCard) homeCard.classList.add('active');
+        // Reset classes
+        if (indicator) indicator.classList.remove('active', 'done', 'error');
+        if (homeCard) homeCard.classList.remove('active', 'done', 'error');
 
-        // Track stages for step ratio
-        var stageOrder = ['fetching', 'email_reader', 'memory_writer'];
-        var totalSteps = stageOrder.length;
-        var currentStepNum = 0;
+        if (state === 'hidden') return;
 
-        function updateStepRatio(stageKey, status) {
-            var stageIdx = stageOrder.indexOf(stageKey);
-            if (stageIdx >= 0) {
-                currentStepNum = status === 'complete' ? stageIdx + 1 : stageIdx + 1;
-            }
-            var ratio = currentStepNum + '/' + totalSteps;
-            if (indicatorStep) indicatorStep.textContent = ratio;
-            if (homeStep) homeStep.textContent = ratio;
+        if (state === 'active') {
+            if (indicator) indicator.classList.add('active');
+            if (homeCard) homeCard.classList.add('active');
+        } else if (state === 'done') {
+            if (indicator) indicator.classList.add('active', 'done');
+            if (homeCard) homeCard.classList.add('active', 'done');
+        } else if (state === 'error') {
+            if (indicator) indicator.classList.add('active', 'error');
+            if (homeCard) homeCard.classList.add('active', 'error');
+            if (homeMsg) homeMsg.style.color = 'var(--accent-warm)';
         }
+
+        if (indicatorText) indicatorText.textContent = msg || '';
+        if (homeMsg) homeMsg.textContent = msg || '';
+        if (homeMsg && state !== 'error') homeMsg.style.color = '';
+        if (indicatorStep) indicatorStep.textContent = step || '';
+        if (homeStep) homeStep.textContent = step || '';
+    }
+
+    function getStepRatio(stageKey) {
+        var idx = STAGE_ORDER.indexOf(stageKey);
+        if (idx >= 0) return (idx + 1) + '/' + TOTAL_STEPS;
+        return '';
+    }
+
+    async function checkAndRestoreBuildState() {
+        // Poll the backend for current build state
+        try {
+            var res = await fetch('/api/build/status');
+            if (!res.ok) { startIncrementalBuild(); return; }
+            var state = await res.json();
+
+            if (state.status === 'running') {
+                // A build is already running — show its progress and poll for updates
+                updateAllBuildIndicators('active', state.message || 'Build in progress...', state.step || '');
+                updateProfileBuildIndicator('active', state.message, state.step);
+                pollBuildStatus();
+            } else if (state.status === 'complete' && state.finished_at &&
+                       (Date.now() / 1000 - state.finished_at) < 30) {
+                // Completed very recently — show done state briefly
+                updateAllBuildIndicators('done', 'Sync complete', TOTAL_STEPS + '/' + TOTAL_STEPS);
+                updateProfileBuildIndicator('done', 'Sync complete', TOTAL_STEPS + '/' + TOTAL_STEPS);
+                setTimeout(function() {
+                    updateAllBuildIndicators('hidden', '', '');
+                }, 5000);
+            } else {
+                // Idle or stale — start a fresh build
+                startIncrementalBuild();
+            }
+        } catch (e) {
+            // Can't reach backend — try building anyway
+            startIncrementalBuild();
+        }
+    }
+
+    function pollBuildStatus() {
+        // Poll /api/build/status every 1.5s to track a running build we didn't start
+        var pollTimer = setInterval(async function() {
+            try {
+                var res = await fetch('/api/build/status');
+                if (!res.ok) { clearInterval(pollTimer); return; }
+                var state = await res.json();
+
+                if (state.status === 'running') {
+                    updateAllBuildIndicators('active', state.message || 'Building...', state.step || '');
+                    updateProfileBuildIndicator('active', state.message, state.step);
+                } else if (state.status === 'complete') {
+                    clearInterval(pollTimer);
+                    updateAllBuildIndicators('done', 'Sync complete', TOTAL_STEPS + '/' + TOTAL_STEPS);
+                    updateProfileBuildIndicator('done', 'Sync complete', TOTAL_STEPS + '/' + TOTAL_STEPS);
+                    loadHomeData();
+                    loadProfileStats();
+                    setTimeout(function() {
+                        updateAllBuildIndicators('hidden', '', '');
+                    }, 5000);
+                } else if (state.status === 'error') {
+                    clearInterval(pollTimer);
+                    updateAllBuildIndicators('error', state.message || 'Build failed', '');
+                    updateProfileBuildIndicator('error', state.message, '');
+                    setTimeout(function() {
+                        updateAllBuildIndicators('hidden', '', '');
+                    }, 8000);
+                } else {
+                    // idle — build must have finished between checks
+                    clearInterval(pollTimer);
+                    updateAllBuildIndicators('hidden', '', '');
+                }
+            } catch (e) {
+                clearInterval(pollTimer);
+            }
+        }, 1500);
+    }
+
+    function updateProfileBuildIndicator(state, msg, step) {
+        // Update the profile page build progress indicator
+        var progress = document.getElementById('buildProgress');
+        var message = document.getElementById('progressMessage');
+        var stepEl = document.getElementById('progressStep');
+        var btn = document.getElementById('buildBtn');
+
+        if (!progress) return;
+
+        if (state === 'active') {
+            progress.style.display = 'flex';
+            progress.classList.remove('done', 'error');
+            if (message) { message.textContent = msg || ''; message.style.color = ''; }
+            if (stepEl) stepEl.textContent = step || '';
+            if (btn) btn.disabled = true;
+        } else if (state === 'done') {
+            progress.style.display = 'flex';
+            progress.classList.remove('error');
+            progress.classList.add('done');
+            if (message) { message.textContent = msg || 'Done!'; message.style.color = ''; }
+            if (stepEl) stepEl.textContent = step || '';
+            if (btn) btn.disabled = false;
+        } else if (state === 'error') {
+            progress.style.display = 'flex';
+            progress.classList.remove('done');
+            progress.classList.add('error');
+            if (message) { message.textContent = msg || 'Failed'; message.style.color = 'var(--accent-warm)'; }
+            if (stepEl) stepEl.textContent = '';
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    function connectToBuildSSE(url) {
+        // Connect to an SSE build stream and update ALL indicators
+        var source = new EventSource(url);
+
+        updateAllBuildIndicators('active', 'Starting pipeline...', '');
+        updateProfileBuildIndicator('active', 'Starting pipeline...', '');
 
         source.onmessage = function(e) {
             var event = JSON.parse(e.data);
             var msg = event.message || event.stage || '';
+            var step = '';
 
-            // Update text
-            if (indicatorText) indicatorText.textContent = msg;
-            if (homeMsg) homeMsg.textContent = msg;
-
-            // Update step ratio
             if (event.stage && event.stage !== 'complete' && event.stage !== 'error') {
-                updateStepRatio(event.stage, event.status);
+                step = getStepRatio(event.stage);
             }
+
+            // Update all three indicator locations
+            updateAllBuildIndicators('active', msg, step);
+            updateProfileBuildIndicator('active', msg, step);
 
             if (event.stage === 'complete') {
                 source.close();
-                if (indicator) indicator.classList.add('done');
-                if (indicatorText) indicatorText.textContent = 'Sync complete';
-                if (indicatorStep) indicatorStep.textContent = totalSteps + '/' + totalSteps;
-                if (homeCard) homeCard.classList.add('done');
-                if (homeMsg) homeMsg.textContent = event.message || 'Done!';
-                if (homeStep) homeStep.textContent = totalSteps + '/' + totalSteps;
+                var doneStep = TOTAL_STEPS + '/' + TOTAL_STEPS;
+                updateAllBuildIndicators('done', 'Sync complete', doneStep);
+                updateProfileBuildIndicator('done', event.message || 'Done!', doneStep);
                 loadHomeData();
+                loadProfileStats();
                 setTimeout(function() {
-                    if (indicator) indicator.classList.remove('active');
+                    updateAllBuildIndicators('hidden', '', '');
                 }, 5000);
             }
 
             if (event.stage === 'error') {
                 source.close();
-                if (indicator) indicator.classList.add('error');
-                if (indicatorText) indicatorText.textContent = 'Sync failed';
-                if (homeCard) homeCard.classList.add('error');
-                if (homeMsg) {
-                    homeMsg.textContent = event.message || 'Error during sync';
-                    homeMsg.style.color = 'var(--accent-warm)';
-                }
+                updateAllBuildIndicators('error', event.message || 'Sync failed', '');
+                updateProfileBuildIndicator('error', event.message || 'Pipeline failed', '');
                 setTimeout(function() {
-                    if (indicator) indicator.classList.remove('active');
+                    updateAllBuildIndicators('hidden', '', '');
                 }, 8000);
             }
         };
 
         source.onerror = function() {
             source.close();
-            if (indicator) { indicator.classList.add('error'); indicator.classList.remove('active'); }
-            if (homeMsg) {
-                homeMsg.textContent = 'Connection lost. Check server logs.';
-                homeMsg.style.color = 'var(--accent-warm)';
-            }
+            updateAllBuildIndicators('error', 'Connection lost. Check server logs.', '');
+            updateProfileBuildIndicator('error', 'Connection lost.', '');
+            setTimeout(function() {
+                updateAllBuildIndicators('hidden', '', '');
+            }, 8000);
         };
+
+        return source;
+    }
+
+    function startIncrementalBuild() {
+        // Auto-process newest emails in background, skipping already-processed
+        var url = '/api/stream/build?days_back=180&max_emails=500&gmail_query=';
+        connectToBuildSSE(url);
     }
 
     // ── NAVIGATION ─────────────────────────────────────────────────────
@@ -3474,6 +4170,7 @@ a {
     var vaultSelectedFile = null;
     var vaultAllMemories = [];
     var vaultStatusFilter = 'all';
+    var vaultQuadrantFilter = null;
 
     async function loadVaultData() {
         try {
@@ -3529,17 +4226,28 @@ a {
         var searchEl = document.getElementById('vaultSearch');
         if (searchEl) searchEl.value = '';
 
-        // Show filter bar only for action_required
+        // Show filter bar and Eisenhower matrix only for action_required
         var filterBar = document.getElementById('vaultFilterBar');
         if (filterBar) {
             filterBar.classList.toggle('visible', type === 'action_required');
         }
-        // Reset filter when switching types
+        var matrix = document.getElementById('vaultEisenhowerMatrix');
+        if (matrix) {
+            matrix.classList.toggle('visible', type === 'action_required');
+        }
+        // Reset filters when switching types
         vaultStatusFilter = 'all';
         var filterBtns = document.querySelectorAll('.vault-filter-btn');
         for (var i = 0; i < filterBtns.length; i++) {
             filterBtns[i].classList.toggle('active', filterBtns[i].getAttribute('data-filter') === 'all');
         }
+        vaultQuadrantFilter = null;
+        var eqCells = document.querySelectorAll('.eisenhower-cell');
+        for (var i = 0; i < eqCells.length; i++) {
+            eqCells[i].classList.remove('active');
+        }
+        var eqClearBtn = document.getElementById('eqClearBtn');
+        if (eqClearBtn) eqClearBtn.style.display = 'none';
 
         // Render items
         renderVaultItems(type);
@@ -3572,6 +4280,18 @@ a {
             });
         }
 
+        // Apply quadrant filter for action_required
+        if (type === 'action_required' && vaultQuadrantFilter) {
+            filtered = filtered.filter(function(m) {
+                return m.quadrant === vaultQuadrantFilter;
+            });
+        }
+
+        // Update Eisenhower matrix counts (after status filter, before quadrant filter)
+        if (type === 'action_required') {
+            updateEisenhowerCounts();
+        }
+
         if (filtered.length === 0) {
             var emptyP = document.createElement('p');
             emptyP.className = 'empty-state';
@@ -3580,7 +4300,7 @@ a {
             return;
         }
 
-        filtered.forEach(function(m) {
+        filtered.forEach(function(m, idx) {
             var filepath = m.filepath || '';
             var memType = m.type || type;
             var filename = filepath.replace(/\\/g, '/').split('/').pop() || '';
@@ -3588,19 +4308,28 @@ a {
             var item = document.createElement('button');
             item.className = 'vault-file-item';
             item.setAttribute('data-filepath', memType + '/' + filename);
+            // Stagger entrance animation (cap at 200ms to avoid delay on long lists)
+            var delay = Math.min(idx * 30, 200);
+            item.style.animation = 'vaultItemIn 0.3s var(--ease-gentle) ' + delay + 'ms both';
+
+            // Row 1: Title + date inline
+            var topRow = document.createElement('div');
+            topRow.style.cssText = 'display:flex;align-items:baseline;justify-content:space-between;gap:8px';
 
             var title = document.createElement('span');
             title.className = 'vault-file-title';
             title.textContent = m.title || filename;
-            item.appendChild(title);
+            topRow.appendChild(title);
 
             if (m.date) {
                 var date = document.createElement('span');
                 date.className = 'vault-file-date';
                 date.textContent = m.date;
-                item.appendChild(date);
+                topRow.appendChild(date);
             }
+            item.appendChild(topRow);
 
+            // Row 2: Badges (status, commitment)
             // Status badge for action_required items
             if (type === 'action_required') {
                 var status = m.status || 'active';
@@ -3608,6 +4337,14 @@ a {
                 badge.className = 'vault-status-badge status-' + status;
                 badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
                 item.appendChild(badge);
+            }
+
+            // Commitment status badge for commitment items
+            if (type === 'commitments' && m.commitment_status) {
+                var csBadge = document.createElement('span');
+                csBadge.className = 'vault-status-badge commitment-' + m.commitment_status;
+                csBadge.textContent = m.commitment_status.charAt(0).toUpperCase() + m.commitment_status.slice(1);
+                item.appendChild(csBadge);
             }
 
             if (m.tags && m.tags.length > 0) {
@@ -3665,24 +4402,33 @@ a {
             // Set title
             titleEl.textContent = title;
 
-            // Build meta badges
+            // Build meta badges with semantic classes
             metaEl.textContent = '';
             var metaEntries = [];
-            if (fm.date) metaEntries.push('Date: ' + fm.date);
-            if (fm.priority) metaEntries.push('Priority: ' + fm.priority);
-            if (fm.tags && fm.tags.length) metaEntries.push('Tags: ' + fm.tags.join(', '));
-            if (fm.role) metaEntries.push('Role: ' + fm.role);
-            if (fm.organization) metaEntries.push('Org: ' + fm.organization);
-            if (fm.email) metaEntries.push('Email: ' + fm.email);
+            if (fm.date) metaEntries.push({ text: fm.date, cls: '', icon: 'fa-regular fa-calendar' });
+            if (fm.priority) metaEntries.push({ text: fm.priority, cls: '' });
+            if (fm.tags && fm.tags.length) metaEntries.push({ text: fm.tags.join(', '), cls: '' });
+            if (fm.role) metaEntries.push({ text: fm.role, cls: '' });
+            if (fm.organization) metaEntries.push({ text: fm.organization, cls: '' });
+            if (fm.email) metaEntries.push({ text: fm.email, cls: '' });
             // Action Required-specific fields
-            if (fm.quadrant) metaEntries.push('Quadrant: ' + fm.quadrant.replace(/-/g, ' '));
-            if (fm.deadline) metaEntries.push('Deadline: ' + fm.deadline);
-            if (fm.status) metaEntries.push('Status: ' + fm.status.charAt(0).toUpperCase() + fm.status.slice(1));
-            if (fm.status_reason) metaEntries.push('Reason: ' + fm.status_reason);
-            if (fm.source_type) metaEntries.push('Source: ' + fm.source_type);
+            if (fm.quadrant) metaEntries.push({ text: fm.quadrant.replace(/-/g, ' '), cls: 'meta-quadrant', icon: 'fa-solid fa-crosshairs' });
+            if (fm.deadline) metaEntries.push({ text: fm.deadline, cls: 'meta-deadline', icon: 'fa-solid fa-clock' });
+            if (fm.status) metaEntries.push({ text: fm.status.charAt(0).toUpperCase() + fm.status.slice(1), cls: 'meta-status-' + fm.status, icon: 'fa-solid fa-circle' });
+            if (fm.status_reason) metaEntries.push({ text: fm.status_reason, cls: '' });
+            if (fm.source_type) metaEntries.push({ text: fm.source_type, cls: '', icon: 'fa-solid fa-envelope' });
+            // Commitment-specific fields
+            if (fm.commitment_status) metaEntries.push({ text: fm.commitment_status.charAt(0).toUpperCase() + fm.commitment_status.slice(1), cls: 'meta-status-' + fm.commitment_status });
             metaEntries.forEach(function(entry) {
                 var span = document.createElement('span');
-                span.textContent = entry;
+                if (entry.cls) span.className = entry.cls;
+                if (entry.icon) {
+                    var ico = document.createElement('i');
+                    ico.className = entry.icon;
+                    ico.style.cssText = 'font-size:9px;margin-right:4px;opacity:0.7';
+                    span.appendChild(ico);
+                }
+                span.appendChild(document.createTextNode(entry.text));
                 metaEl.appendChild(span);
             });
 
@@ -3709,15 +4455,28 @@ a {
             body.textContent = '';
             var emptyDiv = document.createElement('div');
             emptyDiv.className = 'vault-content-empty';
+
+            var iconWrap = document.createElement('div');
+            iconWrap.style.cssText = 'width:64px;height:64px;border-radius:16px;background:var(--surface-warm);display:flex;align-items:center;justify-content:center;margin-bottom:16px';
             var icon = document.createElement('i');
             icon.className = 'fa-regular fa-file-lines';
             icon.setAttribute('aria-hidden', 'true');
-            icon.style.cssText = 'font-size:48px;color:var(--text-tertiary);opacity:0.4;margin-bottom:12px';
-            emptyDiv.appendChild(icon);
+            icon.style.cssText = 'font-size:28px;color:var(--text-tertiary);opacity:0.5';
+            iconWrap.appendChild(icon);
+            emptyDiv.appendChild(iconWrap);
+
             var p = document.createElement('p');
             p.className = 'empty-state';
-            p.textContent = 'Select a memory to view its content';
+            p.style.cssText = 'font-style:normal;font-weight:500;color:var(--text-secondary)';
+            p.textContent = 'Select a memory';
             emptyDiv.appendChild(p);
+
+            var p2 = document.createElement('p');
+            p2.className = 'empty-state';
+            p2.style.cssText = 'font-size:12px;margin-top:4px';
+            p2.textContent = 'Choose an item from the list to view its contents';
+            emptyDiv.appendChild(p2);
+
             body.appendChild(emptyDiv);
         }
     }
@@ -3763,6 +4522,64 @@ a {
         if (btn) btn.classList.add('active');
         renderVaultItems(vaultSelectedType);
     };
+
+    window.setQuadrantFilter = function(quadrant, btn) {
+        vaultQuadrantFilter = quadrant;
+        var cells = document.querySelectorAll('.eisenhower-cell');
+        for (var i = 0; i < cells.length; i++) {
+            cells[i].classList.remove('active');
+        }
+        if (btn) btn.classList.add('active');
+        var clearBtn = document.getElementById('eqClearBtn');
+        if (clearBtn) clearBtn.style.display = 'block';
+        renderVaultItems(vaultSelectedType);
+    };
+
+    window.clearQuadrantFilter = function() {
+        vaultQuadrantFilter = null;
+        var cells = document.querySelectorAll('.eisenhower-cell');
+        for (var i = 0; i < cells.length; i++) {
+            cells[i].classList.remove('active');
+        }
+        var clearBtn = document.getElementById('eqClearBtn');
+        if (clearBtn) clearBtn.style.display = 'none';
+        renderVaultItems(vaultSelectedType);
+    };
+
+    function updateEisenhowerCounts() {
+        var items = vaultAllMemories.filter(function(m) {
+            return m.type === 'action_required';
+        });
+
+        // Respect the current status filter so counts reflect what's visible
+        if (vaultStatusFilter !== 'all') {
+            items = items.filter(function(m) {
+                return (m.status || 'active') === vaultStatusFilter;
+            });
+        }
+
+        var counts = {
+            'urgent-important': 0,
+            'important-not-urgent': 0,
+            'urgent-not-important': 0,
+            'neither': 0
+        };
+
+        for (var i = 0; i < items.length; i++) {
+            var q = items[i].quadrant || 'important-not-urgent';
+            if (counts[q] !== undefined) counts[q]++;
+        }
+
+        var el;
+        el = document.getElementById('eqCountUI');
+        if (el) el.textContent = counts['urgent-important'];
+        el = document.getElementById('eqCountINU');
+        if (el) el.textContent = counts['important-not-urgent'];
+        el = document.getElementById('eqCountUNI');
+        if (el) el.textContent = counts['urgent-not-important'];
+        el = document.getElementById('eqCountN');
+        if (el) el.textContent = counts['neither'];
+    }
 
     // ── PROFILE PAGE ───────────────────────────────────────────────────
 
@@ -3881,66 +4698,13 @@ a {
         var days = document.getElementById('buildDays').value;
         var max = document.getElementById('buildMax').value;
         var query = document.getElementById('buildQuery').value;
-        var btn = document.getElementById('buildBtn');
-        var progress = document.getElementById('buildProgress');
-        var message = document.getElementById('progressMessage');
-        var stepEl = document.getElementById('progressStep');
-
-        btn.disabled = true;
-        progress.style.display = 'flex';
-        progress.classList.remove('done', 'error');
-        message.textContent = 'Starting pipeline...';
-        message.style.color = '';
-        if (stepEl) stepEl.textContent = '';
 
         var url = '/api/stream/build?days_back=' + encodeURIComponent(days) +
                   '&max_emails=' + encodeURIComponent(max) +
                   '&gmail_query=' + encodeURIComponent(query);
-        var source = new EventSource(url);
 
-        var stageOrder = ['fetching', 'email_reader', 'memory_writer'];
-        var totalSteps = stageOrder.length;
-
-        source.onmessage = function(e) {
-            var event = JSON.parse(e.data);
-
-            if (event.message) {
-                message.textContent = event.message;
-            }
-
-            // Update step ratio
-            var stageKey = event.stage || '';
-            var stageIdx = stageOrder.indexOf(stageKey);
-            if (stageIdx >= 0 && stepEl) {
-                stepEl.textContent = (stageIdx + 1) + '/' + totalSteps;
-            }
-
-            if (event.stage === 'complete') {
-                source.close();
-                btn.disabled = false;
-                progress.classList.add('done');
-                var total = (event.stats && event.stats.total) || 0;
-                message.textContent = 'Done! ' + total + ' memories processed.';
-                if (stepEl) stepEl.textContent = totalSteps + '/' + totalSteps;
-                loadProfileStats();
-            }
-
-            if (event.stage === 'error') {
-                source.close();
-                btn.disabled = false;
-                progress.classList.add('error');
-                message.textContent = 'Error: ' + (event.message || 'Pipeline failed');
-                message.style.color = 'var(--accent-warm)';
-            }
-        };
-
-        source.onerror = function() {
-            source.close();
-            btn.disabled = false;
-            progress.classList.add('error');
-            message.textContent = 'Connection lost. Check server logs.';
-            message.style.color = 'var(--accent-warm)';
-        };
+        // Uses the unified build system — updates sidebar + home + profile
+        connectToBuildSSE(url);
     };
 
     async function loadProfileStats() {

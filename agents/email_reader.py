@@ -135,6 +135,12 @@ FOR "people" OBSERVATIONS ONLY — include an additional "person_data" object:
 
 GRANULARITY RULES (CRITICAL):
 - Create ONE observation per PERSON (not one observation for multiple people)
+- "People" means INDIVIDUAL HUMAN BEINGS only — NOT organizations, companies, brands, newsletters,
+  mailing lists, automated senders, or services. Examples of what is NOT a person:
+  * "Crossway" (publisher), "GitHub" (service), "AWS" (company), "Morning Brew" (newsletter)
+  * "noreply@...", "notifications@...", "support@..." (automated senders)
+  If an email is from an organization, extract the HUMAN contacts mentioned inside it instead.
+  If no individual human is identifiable, do NOT create a people observation for that sender.
 - Create ONE observation per DECISION (not one observation summarizing multiple decisions)
 - Create ONE observation per COMMITMENT (each event, acceptance, or promise the user made = separate observation)
 - Create ONE observation per ACTION_REQUIRED (each external request, notice, or pending item = separate observation)
@@ -195,6 +201,7 @@ TOKEN OPTIMIZATION:
 TITLE FORMAT RULES:
 - For "people": MUST be "FirstName LastName — Role/Relationship" (e.g., "Oji Udezue — Business Partner")
   NOT "Relationship with Person" or "Person is a..."
+  NEVER use an organization name as FirstName LastName — organizations are NOT people.
 - For "commitments": Something the user accepted/agreed to + when (e.g., "Austin Meetup Moderation — Feb 21")
 - For "action_required": External request needing action (e.g., "Renew AWS certification by March 15")
 - For "decisions": What was decided (e.g., "Chose React over Vue for frontend")
@@ -205,7 +212,7 @@ REQUIRED DATA FIELDS:
   * Infer communication preferences, scheduling patterns, working style from email behavior
   * Note topics of interest from email subjects and content
   * Capture relationship context (how user knows this person)
-- For "commitments" observations: MUST include date, time, and venue/location if mentioned
+- For "commitments" observations: MUST include date, time, venue/location if mentioned, AND commitment_status ("invited", "confirmed", "declined", "tentative")
 - For "action_required" observations: MUST include deadline (if any), who is requesting, and what action is needed
 - For all observations: Include specific evidence from emails
 
@@ -218,8 +225,9 @@ If emails mention Alice (alice@acme.com), Bob (bob@eng.io), and Carol:
   { "type": "people", "title": "Bob Jones — Engineer", "content": "Senior engineer at Eng.io. Code review partner.", "priority": "🟡", "person_data": { "role": "Senior Engineer", "organization": "Eng.io", "email": "bob@eng.io", "topics_of_interest": ["Rust"], ... }, ... }
   { "type": "people", "title": "Carol Lee — PM", "content": "PM for Q1 launch. Detail-oriented.", "priority": "🟡", "person_data": { "role": "PM", "scheduling_preferences": "Weekly syncs Mondays 10am", "working_style": "Detail-oriented", ... }, ... }
 
-If emails mention commitments (things the user accepted/agreed to do):
-  { "type": "commitments", "title": "Austin Meetup Moderation — Feb 21", "content": "Accepted invitation to moderate Austin Coding Meetup on February 21, 2026 at 7pm at Capital Factory.", "priority": "🔴", ... }
+If emails mention commitments (things the user accepted/agreed to do, or was invited to):
+  { "type": "commitments", "title": "Austin Meetup Moderation — Feb 21", "content": "Accepted invitation to moderate Austin Coding Meetup on February 21, 2026 at 7pm at Capital Factory.", "priority": "🔴", "commitment_status": "confirmed", ... }
+  { "type": "commitments", "title": "AI Ethics Workshop — March 10", "content": "Received invitation to AI Ethics Workshop at UT Austin on March 10.", "priority": "🟡", "commitment_status": "invited", ... }
   { "type": "commitments", "title": "Webinar Presentation — March 5", "content": "Agreed to present at internal AI Tools webinar. Registered and confirmed.", "priority": "🟡", ... }
 
 If emails mention things requiring action (external requests the user hasn't acted on yet):
@@ -232,6 +240,8 @@ IMPORTANT RULES:
 - Use ONLY these types: decisions, people, commitments, action_required
 - Be specific — "prefers morning meetings" not "has meeting preferences"
 - For people: Title = "Name — Role", include email address, role/relationship
+- For people: ONLY create observations for individual humans, NEVER for organizations, companies,
+  publishers, newsletters, SaaS products, or automated senders
 - For commitments: Include date, time, venue/location when available
 - For action_required: Include deadline, requester, and specific action needed
 - Capture preferences, topics, and communication style WITHIN person_data fields on person observations

@@ -30,5 +30,7 @@ Each file lives in `/docs` unless otherwise noted. Claude reads this file for de
 
 | `error-handling.md` | Failure strategy: caught vs propagated errors, retry/backoff policies, DLQ setup, circuit breakers, logging/alerting, user-facing error responses. | Adding a new integration/service, changing retry logic, or modifying error response format |
 
+| `agentic-architecture.md` | Agent inventory and design: each agent's role, system prompt summary, tools available, input/output contract, orchestration flow, MCP server mappings, and **Tool Permission Matrix** (cross-reference table showing which tools each agent can call, with R/W annotations). Use Mermaid sequence diagrams for agent interactions and flowcharts for orchestration routing. | Adding/removing/renaming an agent, changing an agent's tools or system prompt, modifying orchestration routing, or changing MCP server tool exposure |
+
 | `decisions/YYYY-MM-DD-short-title.md` | Architecture Decision Records. Sections: Context, Options Considered, Decision, Reasoning. Append-only — never edit a past ADR, write a new one that supersedes it. | Making an architectural choice, adopting/replacing technology, or any non-obvious tradeoff |
 
