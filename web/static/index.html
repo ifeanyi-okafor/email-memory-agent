@@ -233,10 +233,10 @@ a {
 .nav-brand {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     padding: 4px 6px 20px;
     border-bottom: 1px solid var(--border-nav);
-    margin-bottom: 16px;
+    margin-bottom: 20px;
     white-space: nowrap;
     overflow: hidden;
 }
@@ -251,11 +251,16 @@ a {
     align-items: center;
     justify-content: center;
     color: var(--text-inverse);
-    box-shadow: 0 2px 8px rgba(123, 158, 135, 0.30);
+    box-shadow: 0 2px 10px rgba(123, 158, 135, 0.35);
+    transition: transform 0.3s var(--ease-gentle);
+}
+
+.nav-brand-icon:hover {
+    transform: rotate(-5deg) scale(1.05);
 }
 
 .nav-brand-icon i {
-    font-size: 18px;
+    font-size: 17px;
 }
 
 .nav-brand-text {
@@ -276,13 +281,13 @@ a {
 /* Section label */
 .nav-section-label {
     font-family: var(--font-mono);
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 500;
     text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.10em;
     color: var(--text-nav-label);
-    padding: 0 12px;
-    margin-bottom: 6px;
+    padding: 0 14px;
+    margin-bottom: 8px;
     white-space: nowrap;
     overflow: hidden;
     transition: opacity 0.25s var(--ease-gentle);
@@ -297,52 +302,118 @@ a {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
 }
 
 .nav-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
-    border-radius: var(--radius-sm);
+    gap: 12px;
+    padding: 9px 12px;
+    border-radius: 10px;
     color: var(--text-nav);
     cursor: pointer;
-    transition: all 0.2s var(--ease-gentle);
+    transition: all 0.25s var(--ease-gentle);
     white-space: nowrap;
     overflow: hidden;
     position: relative;
+    border: 1.5px solid transparent;
 }
 
 .nav-item:hover {
     background: var(--bg-nav-hover);
     color: var(--text-nav-active);
+    border-color: rgba(250, 248, 245, 0.04);
 }
 
 .nav-item.active {
-    background: var(--bg-nav-active);
+    background: rgba(123, 158, 135, 0.14);
     color: var(--text-nav-active);
+    border-color: rgba(123, 158, 135, 0.18);
+}
+
+/* Active indicator bar */
+.nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 55%;
+    border-radius: 0 3px 3px 0;
+    background: var(--accent-sage);
+    box-shadow: 0 0 8px rgba(123, 158, 135, 0.3);
 }
 
 .nav-item-icon {
-    width: 22px;
-    height: 22px;
-    min-width: 22px;
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 8px;
+    transition: all 0.25s var(--ease-gentle);
 }
 
 .nav-item-icon i {
-    font-size: 16px;
+    font-size: 14px;
+    transition: transform 0.25s var(--ease-gentle);
+}
+
+/* Per-page icon tints (dark theme adapted) */
+.nav-item[data-page="home"] .nav-item-icon {
+    background: rgba(196, 149, 106, 0.12);
+    color: var(--accent-warm-soft);
+}
+
+.nav-item[data-page="chat"] .nav-item-icon {
+    background: rgba(123, 158, 135, 0.12);
+    color: var(--accent-sage-soft);
+}
+
+.nav-item[data-page="vault"] .nav-item-icon {
+    background: rgba(92, 122, 175, 0.14);
+    color: rgba(148, 176, 218, 0.9);
+}
+
+/* Active state brightens icon chip */
+.nav-item.active .nav-item-icon {
+    transform: scale(1.05);
+}
+
+.nav-item.active[data-page="home"] .nav-item-icon {
+    background: rgba(196, 149, 106, 0.20);
+    color: var(--accent-warm-soft);
+}
+
+.nav-item.active[data-page="chat"] .nav-item-icon {
+    background: rgba(123, 158, 135, 0.20);
+    color: var(--accent-sage-soft);
+}
+
+.nav-item.active[data-page="vault"] .nav-item-icon {
+    background: rgba(92, 122, 175, 0.22);
+    color: rgba(168, 196, 238, 1);
+}
+
+/* Hover lifts the icon */
+.nav-item:hover .nav-item-icon i {
+    transform: scale(1.1);
 }
 
 .nav-item-label {
-    font-family: var(--font-serif);
-    font-size: 13.5px;
+    font-family: var(--font-sans);
+    font-size: 13px;
     font-weight: 400;
     opacity: 1;
     transition: opacity 0.25s var(--ease-gentle);
+    letter-spacing: 0.01em;
+}
+
+.nav-item.active .nav-item-label {
+    font-weight: 600;
 }
 
 .app-nav.collapsed .nav-item-label {
@@ -357,42 +428,48 @@ a {
     margin-top: 8px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
 }
 
 .nav-profile {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 6px 8px;
-    border-radius: var(--radius-sm);
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 10px;
     overflow: hidden;
     white-space: nowrap;
-    border: none;
+    border: 1.5px solid transparent;
     background: none;
     cursor: pointer;
     text-align: left;
     font: inherit;
     color: inherit;
-    transition: background 0.2s var(--ease-gentle);
+    transition: all 0.25s var(--ease-gentle);
 }
 .nav-profile:hover {
     background: var(--bg-nav-hover);
+    border-color: rgba(250, 248, 245, 0.04);
 }
 
 .nav-avatar {
     width: 32px;
     height: 32px;
     min-width: 32px;
-    border-radius: var(--radius-full);
-    background: linear-gradient(135deg, var(--accent-sage-soft), var(--accent-sage));
+    border-radius: 9px;
+    background: linear-gradient(135deg, rgba(196, 149, 106, 0.25), rgba(196, 149, 106, 0.15));
     display: flex;
     align-items: center;
     justify-content: center;
     font-family: var(--font-sans);
     font-weight: 600;
-    font-size: 13px;
-    color: var(--text-inverse);
+    font-size: 12px;
+    color: var(--accent-warm-soft);
+    transition: transform 0.25s var(--ease-gentle);
+}
+
+.nav-profile:hover .nav-avatar {
+    transform: scale(1.05);
 }
 
 .nav-profile-info {
@@ -428,19 +505,19 @@ a {
     justify-content: center;
     width: 100%;
     padding: 8px 0;
-    color: var(--text-nav);
-    border-radius: var(--radius-sm);
-    transition: all 0.2s var(--ease-gentle);
+    color: var(--text-nav-label);
+    border-radius: 10px;
+    transition: all 0.25s var(--ease-gentle);
 }
 
 .nav-collapse-btn:hover {
     color: var(--text-nav-active);
-    background: var(--bg-nav-hover);
+    background: rgba(250, 248, 245, 0.06);
 }
 
 .nav-collapse-btn i {
-    font-size: 14px;
-    transition: transform 0.35s var(--ease-gentle);
+    font-size: 13px;
+    transition: transform 0.35s var(--ease-spring);
 }
 
 .app-nav.collapsed .nav-collapse-btn i {
@@ -2755,21 +2832,21 @@ a {
         <div class="nav-items">
             <button class="nav-item" data-page="home" onclick="navigateTo('home')" aria-label="Home">
                 <span class="nav-item-icon" aria-hidden="true">
-                    <i class="fa-solid fa-house"></i>
+                    <i class="fa-solid fa-compass"></i>
                 </span>
-                <span class="nav-item-label">Home</span>
+                <span class="nav-item-label">Overview</span>
             </button>
 
             <button class="nav-item active" data-page="chat" onclick="navigateTo('chat')" aria-label="Chat">
                 <span class="nav-item-icon" aria-hidden="true">
-                    <i class="fa-solid fa-comments"></i>
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
                 </span>
-                <span class="nav-item-label">Chat</span>
+                <span class="nav-item-label">Ask</span>
             </button>
 
             <button class="nav-item" data-page="vault" onclick="navigateTo('vault')" aria-label="Vault">
                 <span class="nav-item-icon" aria-hidden="true">
-                    <i class="fa-solid fa-vault"></i>
+                    <i class="fa-solid fa-layer-group"></i>
                 </span>
                 <span class="nav-item-label">Vault</span>
             </button>

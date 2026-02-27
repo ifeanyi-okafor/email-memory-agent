@@ -8,6 +8,9 @@ memory/vault/
 memory/processed_emails.json
 vault/
 
+# ── Spec drafts (not for public repo) ────────
+docs/MEMORY_SYSTEM_SPEC.md
+
 # ── Claude Code local settings ────────────────
 .claude/settings.local.json
 .claude/ralph-loop.local.md
