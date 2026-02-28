@@ -4,7 +4,7 @@
 
 ---
 
-## 😩 The Cold-Start Problem
+## 🧊 The Cold-Start Problem
 
 Most AI memory systems save your chat conversations. They only learn about you as you keep chatting. New app? Blank slate. Every time.
 
