@@ -1,41 +1,38 @@
-# Email Memory Agent
+# 🧠 Email Memory Agent
 
 ### Most memory systems wait to learn about you. This one already knows.
 
 ---
 
-## The Cold-Start Problem
+## 😩 The Cold-Start Problem
 
-Most AI memory systems save your chat conversations. That creates a **cold-start problem**: the apps relying on that memory don't know anything about you when you sign up. They only learn more as you keep using the app, keep chatting, keep feeding them data one conversation at a time.
+Most AI memory systems save your chat conversations. They only learn about you as you keep chatting. New app? Blank slate. Every time.
 
-That's backwards.
+That's backwards. The signal is already there — sitting in apps you use every day.
 
-You've been living your life for years — making decisions, meeting people, booking flights, buying coffee. The signal is already there. It's sitting in the apps you already use every day.
-
-That Starbucks receipt that lands in your inbox by 7:15 every morning? It tells me you like your coffee black. That flight booking? Window, not aisle. The Tesla charging report? You drive an EV.
+☕ That Starbucks receipt in your inbox by 7:15 every morning? You like your coffee black.
+✈️ That flight booking? Window, not aisle.
+🔋 That Tesla charging report? You drive an EV.
 
 **Memory should learn about you as you live your life — not only when you chat with chatbots.**
 
 ---
 
-## Persistent Ambient Memory
+## 🔮 Persistent Ambient Memory
 
-**Email Memory Agent** flips the script. Instead of waiting to learn about you, it scans the apps you already use and builds a rich picture of who you are **the moment you onboard**.
+This app flips the script. Instead of waiting to learn about you, it scans your Gmail and builds a rich picture of who you are **the moment you onboard**:
 
-It connects to your Gmail, reads your emails, and constructs a **personal memory vault** — a structured, searchable collection of everything that matters:
+- 👤 **People** — who they are, how you know them, what you've discussed
+- 📋 **Decisions** — what was agreed, when, and with whom
+- 🤝 **Commitments** — promises made (by you and to you), with follow-through tracking
+- 🚨 **Action Items** — what you need to do, prioritized by urgency
 
-- **People** — who they are, how you know them, what you've discussed
-- **Decisions** — what was agreed, when, and with whom
-- **Commitments** — promises made (by you and to you), and whether they've been kept
-- **Action Items** — what you still need to do, prioritized by urgency and importance
-
-Then you can **ask questions** in plain English through a simple chat interface:
+Ask questions in plain English:
 
 > *"What did I promise Mike last month?"*
 > *"Who do I need to follow up with this week?"*
-> *"What were the key decisions from the Q3 planning thread?"*
 
-And get real answers — pulled from your own history. No cold-start. No training period. Just memory, from day one.
+No cold-start. No training period. Just memory, from day one.
 
 ---
 
