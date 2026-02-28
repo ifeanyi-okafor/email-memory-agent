@@ -1,33 +1,33 @@
-# 🧠 Email Memory Agent
+# Email Memory Agent
 
-### Your inbox knows more about you than you think. This app remembers it for you.
-
----
-
-## 😩 The Problem
-
-You've sent and received thousands of emails. Buried in those threads are **promises you made**, **decisions you agreed to**, **people you should follow up with**, and **deadlines you've forgotten**.
-
-But email wasn't designed to be a memory system. It's a firehose — everything comes in, nothing gets organized, and the important stuff sinks to the bottom.
-
-You end up asking yourself:
-
-> *"Did I ever respond to that?"*
-> *"What did we decide about the budget?"*
-> *"Who was that person Sarah introduced me to?"*
-
-Your email has the answers. You just can't find them.
+### Most memory systems wait to learn about you. This one already knows.
 
 ---
 
-## 💡 The Solution
+## The Cold-Start Problem
 
-**Email Memory Agent** connects to your Gmail, reads your emails, and builds a **personal memory vault** — a structured, searchable collection of everything that matters:
+Most AI memory systems save your chat conversations. That creates a **cold-start problem**: the apps relying on that memory don't know anything about you when you sign up. They only learn more as you keep using the app, keep chatting, keep feeding them data one conversation at a time.
 
-- 👤 **People** — who they are, how you know them, what you've discussed
-- 📋 **Decisions** — what was agreed, when, and with whom
-- 🤝 **Commitments** — promises made (by you and to you), and whether they've been kept
-- 🚨 **Action Items** — what you still need to do, prioritized by urgency and importance
+That's backwards.
+
+You've been living your life for years — making decisions, meeting people, booking flights, buying coffee. The signal is already there. It's sitting in the apps you already use every day.
+
+That Starbucks receipt that lands in your inbox by 7:15 every morning? It tells me you like your coffee black. That flight booking? Window, not aisle. The Tesla charging report? You drive an EV.
+
+**Memory should learn about you as you live your life — not only when you chat with chatbots.**
+
+---
+
+## Persistent Ambient Memory
+
+**Email Memory Agent** flips the script. Instead of waiting to learn about you, it scans the apps you already use and builds a rich picture of who you are **the moment you onboard**.
+
+It connects to your Gmail, reads your emails, and constructs a **personal memory vault** — a structured, searchable collection of everything that matters:
+
+- **People** — who they are, how you know them, what you've discussed
+- **Decisions** — what was agreed, when, and with whom
+- **Commitments** — promises made (by you and to you), and whether they've been kept
+- **Action Items** — what you still need to do, prioritized by urgency and importance
 
 Then you can **ask questions** in plain English through a simple chat interface:
 
@@ -35,7 +35,7 @@ Then you can **ask questions** in plain English through a simple chat interface:
 > *"Who do I need to follow up with this week?"*
 > *"What were the key decisions from the Q3 planning thread?"*
 
-And get real answers — pulled from your own email history.
+And get real answers — pulled from your own history. No cold-start. No training period. Just memory, from day one.
 
 ---
 
@@ -213,5 +213,5 @@ That's it — type **"build"** in the chat to scan your emails and start buildin
 
 <p align="center">
   <em>Built as a learning project for multi-agent AI systems.</em><br>
-  <em>Your inbox is smarter than you think. Now you can actually use it.</em>
+  <em>Memory should learn about you as you live your life — not only when you chat with chatbots.</em>
 </p>
