@@ -26,11 +26,14 @@ Orchestrator (orchestrator.py)   ← keyword-routes requests
     ├── ActionAgent         → scans vault + graph, writes action_required
     │                            files via MemoryMCPServer + graph tools
     │
+    ├── InsightsAgent       → cross-correlates vault to discover patterns,
+    │                            relationships, and execution gaps
+    │
     └── QueryAgent          → searches vault via MemoryMCPServer
                                  (memory_server.py)
 
 Memory Vault (vault/)
-  decisions/ people/ commitments/ action_required/
+  decisions/ people/ commitments/ action_required/ insights/
   _graph.json (knowledge graph — bidirectional adjacency map)
   Each file: YAML frontmatter + markdown body + [[wiki-links]]
 ```
@@ -49,6 +52,7 @@ Memory Vault (vault/)
 | `agents/query_agent.py` | Agent 3: searches vault & answers questions |
 | `agents/action_agent.py` | Agent 4: generates Eisenhower-prioritized action items |
 | `agents/reconciliation_agent.py` | Agent 5: reconciles action items vs sent emails (status tracking) |
+| `agents/insights_agent.py` | Agent 6: cross-correlates vault to discover patterns and relationships |
 | `mcp_servers/gmail_server.py` | MCP server exposing Gmail API as tools |
 | `mcp_servers/memory_server.py` | MCP server exposing vault read/write + graph tools |
 | `memory/vault.py` | Vault helpers: init, search, stats, read/write |
@@ -119,9 +123,10 @@ See `.env.example` for all variables. At least one LLM key is required:
 - **Multi-provider LLM**: OpenRouter is primary (Kimi K2.5), Anthropic is fallback. `base_agent.py` converts between OpenAI and Anthropic message formats transparently. If OpenRouter fails, agents automatically retry via Anthropic.
 - **MCP tools**: Each agent gets tool definitions from an MCP server. Tool calls are handled in `base_agent.py`'s agentic loop.
 - **Memory file format**: YAML frontmatter + markdown body + `[[wiki-links]]`. Never break this format — the vault parser depends on it.
-- **Orchestrator routing**: Keyword matching (`build`/`scan` → build pipeline, `refresh`/`prioritize`/`actions` → action refresh, `reconcile`/`update actions`/`action status` → reconciliation, `stats` → stats, else → query). Intent logic lives in `orchestrator.py:route()`.
+- **Orchestrator routing**: Keyword matching (`build`/`scan` → build pipeline, `refresh`/`prioritize`/`actions` → action refresh, `reconcile`/`update actions`/`action status` → reconciliation, `insights`/`patterns`/`connections` → insights generation, `dismiss insight` → dismiss insights, `stats` → stats, else → query). Intent logic lives in `orchestrator.py:route()`.
 - **Knowledge graph**: `_graph.json` is a bidirectional adjacency map rebuilt after every `write_memory()`. Backlinks are injected into file frontmatter. Graph logic lives in `memory/graph.py`.
 - **Action Required**: Uses Eisenhower matrix (`urgent-important`, `important-not-urgent`, `urgent-not-important`, `neither`). ActionAgent reads the full vault + graph to generate justified action items. ReconciliationAgent compares action items against sent emails to update status (active/closed/expired).
+- **Insights**: Cross-correlation intelligence derived from vault analysis. Three types: `relationship` (hidden connections), `execution_gap` (stalled items), `strategic_pattern` (recurring themes). Status is `active` or `dismissed`. InsightsAgent runs as Step 6 of the build pipeline and can be triggered standalone. Max 3 insights per run, each referencing 2+ source memories. QueryAgent is insight-aware and weaves relevant active insights into answers.
 - **NEVER commit**: `token.json`, `.env`, any OAuth credentials. These are user secrets.
 - **Vault location**: Configured in `config/settings.py`. Defaults to `memory/vault/` relative to project root.
 
@@ -135,4 +140,5 @@ See `.env.example` for all variables. At least one LLM key is required:
 | `MemoryWriterAgent` | After EmailReader (pipeline) | Calls `write_memory` + `search_vault` MCP tools |
 | `ActionAgent` | After build (auto) or "refresh"/"prioritize" | Reads full vault + graph, creates Eisenhower-classified action items |
 | `ReconciliationAgent` | After build (auto) or "reconcile"/"update actions" | Compares action items vs sent emails, updates status (active/closed/expired) |
-| `QueryAgent` | Any other message | Calls `search_vault` + `read_memory` + graph tools, synthesizes answer |
+| `InsightsAgent` | After build (auto) or "insights"/"patterns" | Cross-correlates vault to find relationships, execution gaps, strategic patterns |
+| `QueryAgent` | Any other message | Calls `search_vault` + `read_memory` + graph tools, synthesizes answer (insight-aware) |

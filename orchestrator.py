@@ -45,10 +45,12 @@ from agents.memory_writer import MemoryWriterAgent
 from agents.query_agent import QueryAgent
 from agents.action_agent import ActionAgent
 from agents.reconciliation_agent import ReconciliationAgent
+from agents.insights_agent import InsightsAgent
 
 # Import vault helper functions
+from pathlib import Path
 from memory.vault import (
-    initialize_vault, get_vault_stats,
+    initialize_vault, get_vault_stats, list_memories,
     get_processed_email_ids, save_processed_email_ids
 )
 from memory.graph import rebuild_graph
@@ -92,6 +94,7 @@ class Orchestrator:
         self.query_agent = QueryAgent()           # Agent 3: answers questions
         self.action_agent = ActionAgent()      # Agent 4: generates action items
         self.reconciliation_agent = ReconciliationAgent()
+        self.insights_agent = InsightsAgent()  # Agent 6: cross-correlation insights
 
     def route(self, user_input: str) -> str:
         """
@@ -138,6 +141,19 @@ class Orchestrator:
             'check actions', 'reconcile actions'
         ]):
             return self.reconcile_actions(user_input)
+
+        # ── Check for "dismiss insight" intent ────────────────────
+        elif any(kw in user_lower for kw in [
+            'dismiss insight', 'dismiss all insights'
+        ]):
+            return self.dismiss_insights(user_input)
+
+        # ── Check for "insights" intent ──────────────────────────
+        elif any(kw in user_lower for kw in [
+            'insights', 'patterns', 'what am i missing',
+            'cross-correlate', 'connections', 'generate insights'
+        ]):
+            return self.generate_insights(user_input)
 
         # ── Check for "deduplicate" intent ──────────────────────
         elif any(kw in user_lower for kw in [
@@ -201,7 +217,8 @@ class Orchestrator:
             "   Step 3: Memory Writer -- Create memory files\n"
             "   Step 3.5: Rebuild knowledge graph\n"
             "   Step 4: Action Agent -- Generate prioritized action items\n"
-            "   Step 5: Reconciliation Agent -- Update action item statuses",
+            "   Step 5: Reconciliation Agent -- Update action item statuses\n"
+            "   Step 6: Insights Agent -- Cross-correlate vault for patterns",
             title="Pipeline",
             border_style="blue"
         ))
@@ -386,6 +403,13 @@ class Orchestrator:
             progress_callback=progress_callback
         )
 
+        # ── Step 6: Generate insights ──────────────────────────
+        console.print("\n[bold cyan]Step 6/6: Insights Agent[/bold cyan]")
+        insights_result = self.generate_insights(
+            "Generate insights from the full vault.",
+            progress_callback=progress_callback
+        )
+
         # ── Build summary ────────────────────────────────────
         stats = get_vault_stats()
 
@@ -500,6 +524,124 @@ class Orchestrator:
         emit({
             "stage": "reconciliation", "status": "complete",
             "message": "Action item statuses updated"
+        })
+
+        return result
+
+    def dismiss_insights(self, user_input: str) -> str:
+        """
+        Dismiss active insights via chat. Supports:
+          - "dismiss all insights" — dismisses all active insights
+          - "dismiss insight <keyword>" — dismisses insights matching keyword
+
+        Updates the status field in the insight's YAML frontmatter to 'dismissed'.
+        """
+        import yaml as _yaml
+
+        user_lower = user_input.lower().strip()
+        dismiss_all = 'all' in user_lower
+
+        active_insights = [
+            m for m in list_memories('insights')
+            if (m.get('status') or 'active') == 'active'
+        ]
+
+        if not active_insights:
+            return "No active insights to dismiss."
+
+        dismissed = []
+        for insight in active_insights:
+            if not dismiss_all:
+                # Check if any keyword from the user's message matches the title
+                keywords = user_lower.replace('dismiss insight', '').strip().split()
+                if not keywords or not any(
+                    kw in (insight.get('title', '') or '').lower()
+                    for kw in keywords
+                ):
+                    continue
+
+            # Update the file
+            filepath = Path('vault') / insight['filepath']
+            if not filepath.exists():
+                continue
+
+            text = filepath.read_text(encoding='utf-8')
+            if not text.startswith('---'):
+                continue
+
+            parts = text.split('---', 2)
+            if len(parts) < 3:
+                continue
+
+            try:
+                fm = _yaml.safe_load(parts[1]) or {}
+            except _yaml.YAMLError:
+                continue
+
+            fm['status'] = 'dismissed'
+            yaml_str = _yaml.dump(fm, default_flow_style=False, sort_keys=False)
+            filepath.write_text(f"---\n{yaml_str.strip()}\n---{parts[2]}", encoding='utf-8')
+            dismissed.append(insight.get('title', insight['filepath']))
+
+        if dismissed:
+            names = '\n'.join(f"  - {t}" for t in dismissed)
+            return f"Dismissed {len(dismissed)} insight(s):\n{names}"
+        return "No matching active insights found to dismiss."
+
+    def generate_insights(self, user_input: str, progress_callback=None) -> str:
+        """
+        Run the Insights Agent to cross-correlate the vault and discover
+        hidden relationships, execution gaps, and strategic patterns.
+
+        Creates insight memory files (max 3 per run) that reference
+        2+ source memories each.
+
+        Args:
+            user_input:        The user's request.
+            progress_callback: Optional function(dict) for SSE progress events.
+
+        Returns:
+            str: Summary of insights generated.
+        """
+        def emit(event):
+            if progress_callback:
+                progress_callback(event)
+
+        console.print("\n[bold cyan]Insights Agent[/bold cyan] cross-correlating vault...\n")
+        emit({
+            "stage": "insights", "status": "started",
+            "message": "Cross-correlating vault for patterns and insights..."
+        })
+
+        # Reset agent for fresh context
+        self.insights_agent.reset()
+
+        # Set up retry callback
+        def on_insights_retry(attempt, max_retries, delay):
+            emit({
+                "stage": "insights", "status": "in_progress",
+                "message": f"API overloaded -- retrying in {delay:.0f}s (attempt {attempt}/{max_retries})..."
+            })
+        self.insights_agent.on_retry = on_insights_retry
+
+        from datetime import datetime
+        today = datetime.now().strftime('%Y-%m-%d')
+
+        prompt = (
+            "Scan the entire memory vault and knowledge graph. "
+            "Cross-correlate across people, decisions, commitments, and action items "
+            "to discover non-obvious relationships, execution gaps, and strategic patterns. "
+            "Create up to 3 high-quality insight files. "
+            "Check existing insights first to avoid duplicates. "
+            f"Today's date is {today}."
+        )
+
+        result = self.insights_agent.run(prompt, max_tool_rounds=15)
+
+        console.print("[green]OK - Insights Agent complete[/green]\n")
+        emit({
+            "stage": "insights", "status": "complete",
+            "message": "Insights generated"
         })
 
         return result

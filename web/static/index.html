@@ -1442,6 +1442,10 @@ a {
     background: rgba(229, 57, 53, 0.08);
     color: #E53935;
 }
+.vault-tree-item[data-type="insights"] .vault-tree-icon {
+    background: rgba(156, 39, 176, 0.08);
+    color: #9C27B0;
+}
 
 .vault-tree-item.active .vault-tree-icon {
     transform: scale(1.05);
@@ -1476,6 +1480,10 @@ a {
 .vault-tree-item[data-type="action_required"].active .vault-tree-count {
     background: rgba(229, 57, 53, 0.10);
     color: #E53935;
+}
+.vault-tree-item[data-type="insights"].active .vault-tree-count {
+    background: rgba(156, 39, 176, 0.10);
+    color: #9C27B0;
 }
 
 /* ---- File items (column 2) ---- */
@@ -1637,6 +1645,58 @@ a {
 }
 .vault-status-badge.commitment-tentative::before {
     background: #5C7AAF;
+}
+
+/* Insight status badges */
+.vault-status-badge.status-dismissed {
+    background: rgba(0, 0, 0, 0.04);
+    color: var(--text-tertiary);
+}
+.vault-status-badge.status-dismissed::before {
+    background: var(--text-tertiary);
+}
+.vault-status-badge.insight-type-relationship {
+    background: rgba(156, 39, 176, 0.10);
+    color: #7B1FA2;
+}
+.vault-status-badge.insight-type-relationship::before {
+    background: #9C27B0;
+}
+.vault-status-badge.insight-type-execution_gap {
+    background: rgba(255, 152, 0, 0.10);
+    color: #E65100;
+}
+.vault-status-badge.insight-type-execution_gap::before {
+    background: #FF9800;
+}
+.vault-status-badge.insight-type-strategic_pattern {
+    background: rgba(33, 150, 243, 0.10);
+    color: #1565C0;
+}
+.vault-status-badge.insight-type-strategic_pattern::before {
+    background: #2196F3;
+}
+
+/* Dismiss button for insights detail view */
+.vault-dismiss-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    margin-top: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: var(--radius-sm);
+    background: var(--surface-warm);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    transition: all 0.2s var(--ease-gentle);
+}
+.vault-dismiss-btn:hover {
+    background: rgba(229, 57, 53, 0.08);
+    color: #C62828;
+    border-color: rgba(229, 57, 53, 0.2);
 }
 
 /* ---- Status Filter Pills ---- */
@@ -2217,6 +2277,12 @@ a {
     background: rgba(229, 57, 53, 0.08);
     border-color: rgba(229, 57, 53, 0.12);
     color: #C62828;
+}
+
+.type-badge.insights {
+    background: rgba(156, 39, 176, 0.10);
+    border-color: rgba(156, 39, 176, 0.15);
+    color: #7B1FA2;
 }
 
 /* ============================================================================
@@ -2914,6 +2980,10 @@ a {
                     <div class="stat-value" id="statCommitments">&mdash;</div>
                     <div class="stat-label">Commitments</div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statInsights">&mdash;</div>
+                    <div class="stat-label">Insights</div>
+                </div>
             </div>
 
             <!-- Auto-build progress (shown during background email processing) -->
@@ -2979,6 +3049,11 @@ a {
                         <i class="fa-solid fa-bolt vault-tree-icon" aria-hidden="true"></i>
                         <span class="vault-tree-label">Action Required</span>
                         <span class="vault-tree-count" id="countActionRequired">&mdash;</span>
+                    </button>
+                    <button class="vault-tree-item" data-type="insights" onclick="selectVaultType('insights', this)" aria-label="Insights">
+                        <i class="fa-solid fa-lightbulb vault-tree-icon" aria-hidden="true"></i>
+                        <span class="vault-tree-label">Insights</span>
+                        <span class="vault-tree-count" id="countInsights">&mdash;</span>
                     </button>
                 </div>
             </div>
@@ -4183,6 +4258,7 @@ a {
             document.getElementById('statPeople').textContent = (stats.by_type && stats.by_type.people) || 0;
             document.getElementById('statDecisions').textContent = (stats.by_type && stats.by_type.decisions) || 0;
             document.getElementById('statCommitments').textContent = (stats.by_type && stats.by_type.commitments) || 0;
+            document.getElementById('statInsights').textContent = (stats.by_type && stats.by_type.insights) || 0;
         } catch (e) {
             console.error('Failed to load stats:', e);
         }
@@ -4266,7 +4342,7 @@ a {
     }
 
     function updateVaultCounts() {
-        var counts = { people: 0, decisions: 0, commitments: 0, action_required: 0 };
+        var counts = { people: 0, decisions: 0, commitments: 0, action_required: 0, insights: 0 };
         for (var i = 0; i < vaultAllMemories.length; i++) {
             var t = vaultAllMemories[i].type;
             if (counts[t] !== undefined) counts[t]++;
@@ -4280,6 +4356,8 @@ a {
         if (el) el.textContent = counts.commitments;
         el = document.getElementById('countActionRequired');
         if (el) el.textContent = counts.action_required;
+        el = document.getElementById('countInsights');
+        if (el) el.textContent = counts.insights;
     }
 
     window.selectVaultType = function(type, btn) {
@@ -4303,10 +4381,20 @@ a {
         var searchEl = document.getElementById('vaultSearch');
         if (searchEl) searchEl.value = '';
 
-        // Show filter bar and Eisenhower matrix only for action_required
+        // Show filter bar for action_required and insights, Eisenhower matrix only for action_required
         var filterBar = document.getElementById('vaultFilterBar');
         if (filterBar) {
-            filterBar.classList.toggle('visible', type === 'action_required');
+            filterBar.classList.toggle('visible', type === 'action_required' || type === 'insights');
+            // Update filter button labels for insights (active/dismissed vs active/closed/expired)
+            var filterBtnDismissed = filterBar.querySelector('[data-filter="closed"]');
+            var filterBtnExpired = filterBar.querySelector('[data-filter="expired"]');
+            if (type === 'insights') {
+                if (filterBtnDismissed) { filterBtnDismissed.textContent = 'Dismissed'; filterBtnDismissed.setAttribute('data-filter', 'dismissed'); }
+                if (filterBtnExpired) filterBtnExpired.style.display = 'none';
+            } else {
+                if (filterBtnDismissed) { filterBtnDismissed.textContent = 'Closed'; filterBtnDismissed.setAttribute('data-filter', 'closed'); }
+                if (filterBtnExpired) filterBtnExpired.style.display = '';
+            }
         }
         var matrix = document.getElementById('vaultEisenhowerMatrix');
         if (matrix) {
@@ -4350,8 +4438,8 @@ a {
             });
         }
 
-        // Apply status filter for action_required
-        if (type === 'action_required' && vaultStatusFilter !== 'all') {
+        // Apply status filter for action_required and insights
+        if ((type === 'action_required' || type === 'insights') && vaultStatusFilter !== 'all') {
             filtered = filtered.filter(function(m) {
                 return (m.status || 'active') === vaultStatusFilter;
             });
@@ -4406,14 +4494,22 @@ a {
             }
             item.appendChild(topRow);
 
-            // Row 2: Badges (status, commitment)
-            // Status badge for action_required items
-            if (type === 'action_required') {
+            // Row 2: Badges (status, commitment, insight type)
+            // Status badge for action_required and insights items
+            if (type === 'action_required' || type === 'insights') {
                 var status = m.status || 'active';
                 var badge = document.createElement('span');
                 badge.className = 'vault-status-badge status-' + status;
                 badge.textContent = status.charAt(0).toUpperCase() + status.slice(1);
                 item.appendChild(badge);
+            }
+
+            // Insight type badge
+            if (type === 'insights' && m.insight_type) {
+                var itBadge = document.createElement('span');
+                itBadge.className = 'vault-status-badge insight-type-' + m.insight_type;
+                itBadge.textContent = m.insight_type.replace(/_/g, ' ');
+                item.appendChild(itBadge);
             }
 
             // Commitment status badge for commitment items
@@ -4496,6 +4592,9 @@ a {
             if (fm.source_type) metaEntries.push({ text: fm.source_type, cls: '', icon: 'fa-solid fa-envelope' });
             // Commitment-specific fields
             if (fm.commitment_status) metaEntries.push({ text: fm.commitment_status.charAt(0).toUpperCase() + fm.commitment_status.slice(1), cls: 'meta-status-' + fm.commitment_status });
+            // Insight-specific fields
+            if (fm.insight_type) metaEntries.push({ text: fm.insight_type.replace(/_/g, ' '), cls: '', icon: 'fa-solid fa-lightbulb' });
+            if (fm.confidence) metaEntries.push({ text: fm.confidence + ' confidence', cls: '', icon: 'fa-solid fa-signal' });
             metaEntries.forEach(function(entry) {
                 var span = document.createElement('span');
                 if (entry.cls) span.className = entry.cls;
@@ -4515,6 +4614,32 @@ a {
             mdDiv.className = 'vault-rendered-md';
             setSafeHTML(mdDiv, formatContent(data.content || ''));
             body.appendChild(mdDiv);
+
+            // Add dismiss button for active insights
+            if (type === 'insights' && (fm.status || 'active') === 'active') {
+                var dismissBtn = document.createElement('button');
+                dismissBtn.className = 'vault-dismiss-btn';
+                var dismissIcon = document.createElement('i');
+                dismissIcon.className = 'fa-solid fa-xmark';
+                dismissBtn.appendChild(dismissIcon);
+                dismissBtn.appendChild(document.createTextNode(' Dismiss Insight'));
+                dismissBtn.onclick = async function() {
+                    try {
+                        var dRes = await fetch('/api/insights/dismiss', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ filepath: type + '/' + filename })
+                        });
+                        if (dRes.ok) {
+                            await loadVaultData();
+                            loadVaultContent(type, filename);
+                        }
+                    } catch (err) {
+                        console.error('Failed to dismiss insight:', err);
+                    }
+                };
+                body.appendChild(dismissBtn);
+            }
         } catch (e) {
             body.textContent = '';
             var errP = document.createElement('p');

@@ -65,6 +65,7 @@ MEMORY_TYPES = [
     'people',          # Contacts: "Sarah — CTO at Acme" (also captures preferences, topics, comm style)
     'commitments',     # Promises: "review PRs by Friday"
     'action_required', # Action items: prioritized by Eisenhower matrix with justification
+    'insights',        # Cross-correlation intelligence derived from vault analysis
 ]
 
 
@@ -213,12 +214,15 @@ def write_memory(
     deadline: str = None,
     source_type: str = None,
     source_memories: list[str] = None,
-    # Status tracking fields (for action_required reconciliation)
+    # Status tracking fields (for action_required reconciliation and insights)
     status: str = None,
     status_reason: str = None,
     status_updated: str = None,
     # Commitment-specific fields (optional, only used when memory_type == 'commitments')
     commitment_status: str = None,
+    # Insights-specific fields (optional, only used when memory_type == 'insights')
+    insight_type: str = None,
+    confidence: str = None,
     # People-specific fields (optional, only used when memory_type == 'people')
     name: str = None,
     role: str = None,
@@ -394,6 +398,44 @@ def write_memory(
             'status_reason': status_reason or '',
             'status_updated': status_updated or today,
         }
+
+        # Build wiki-links section
+        wiki_links_section = ''
+        if related_to:
+            links = ', '.join([f'[[{entity}]]' for entity in related_to])
+            wiki_links_section = f'\n**Related:** {links}\n'
+
+        yaml_str = yaml.dump(frontmatter, default_flow_style=False, sort_keys=False)
+        file_content = f"""---
+{yaml_str.strip()}
+---
+
+# {title}
+
+{wiki_links_section}
+{content}
+"""
+
+    elif memory_type == 'insights':
+        # ── Insights-specific frontmatter ─────────────────────
+        # Insights are cross-correlation intelligence derived from the vault.
+        # They have an insight_type (relationship/execution_gap/strategic_pattern),
+        # a confidence level (high/medium), and a status (active/dismissed).
+        frontmatter = {
+            'title': title,
+            'date': today,
+            'category': 'insights',
+            'memoryType': 'insights',
+            'priority': priority,
+            'insight_type': insight_type or 'strategic_pattern',
+            'confidence': confidence or 'medium',
+            'status': status or 'active',
+            'source_memories': source_memories or [],
+            'tags': tags or [],
+            'related_to': related_to or [],
+        }
+        if source_emails:
+            frontmatter['source_emails'] = source_emails
 
         # Build wiki-links section
         wiki_links_section = ''
@@ -627,11 +669,13 @@ def list_memories(memory_type: str = None) -> list[dict]:
                     'date': mem['frontmatter'].get('date', ''),
                     'priority': mem['frontmatter'].get('priority', ''),
                     'tags': mem['frontmatter'].get('tags', []),
-                    'status': mem['frontmatter'].get('status') if mtype == 'action_required' else None,
+                    'status': mem['frontmatter'].get('status') if mtype in ('action_required', 'insights') else None,
                     'status_reason': mem['frontmatter'].get('status_reason') if mtype == 'action_required' else None,
                     'quadrant': mem['frontmatter'].get('quadrant') if mtype == 'action_required' else None,
                     'deadline': mem['frontmatter'].get('deadline') if mtype == 'action_required' else None,
                     'commitment_status': mem['frontmatter'].get('commitment_status') if mtype == 'commitments' else None,
+                    'insight_type': mem['frontmatter'].get('insight_type') if mtype == 'insights' else None,
+                    'confidence': mem['frontmatter'].get('confidence') if mtype == 'insights' else None,
                 })
 
     return memories

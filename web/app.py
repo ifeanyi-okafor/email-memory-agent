@@ -304,7 +304,7 @@ async def stream_build(
 
             # Compute step ratio from stage
             stage_order = ["fetching", "email_reader", "memory_writer",
-                           "graph_rebuild", "action_agent", "reconciliation"]
+                           "graph_rebuild", "action_agent", "reconciliation", "insights"]
             stage_key = event.get("stage", "")
             if stage_key in stage_order:
                 idx = stage_order.index(stage_key)
@@ -436,6 +436,113 @@ async def stream_refresh():
             "X-Accel-Buffering": "no"
         }
     )
+
+
+# ============================================================================
+# INSIGHTS ENDPOINT — Run Insights Agent with live progress via SSE
+# ============================================================================
+
+@app.get("/api/stream/insights")
+async def stream_insights():
+    """
+    Run the Insights Agent with live progress updates via SSE.
+
+    Cross-correlates the full vault and knowledge graph to discover
+    hidden relationships, execution gaps, and strategic patterns.
+    """
+    event_queue = queue.Queue()
+
+    def run_insights():
+        try:
+            def on_progress(event):
+                event_queue.put(event)
+
+            orchestrator.generate_insights(
+                user_input="Generate insights from the vault",
+                progress_callback=on_progress
+            )
+        except Exception as e:
+            event_queue.put({"stage": "error", "status": "error", "message": str(e)})
+        finally:
+            event_queue.put(None)
+
+    async def event_generator():
+        thread = threading.Thread(target=run_insights, daemon=True)
+        thread.start()
+
+        while True:
+            try:
+                event = await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: event_queue.get(timeout=0.5)
+                )
+            except queue.Empty:
+                yield ": keepalive\n\n"
+                continue
+
+            if event is None:
+                break
+
+            yield f"data: {json.dumps(event)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
+
+
+# ============================================================================
+# DISMISS INSIGHT ENDPOINT — Mark an insight as dismissed
+# ============================================================================
+
+class DismissRequest(BaseModel):
+    """Data for dismissing an insight."""
+    filepath: str
+
+@app.post("/api/insights/dismiss")
+async def dismiss_insight(req: DismissRequest):
+    """
+    Mark an insight as dismissed by updating its status in the vault file.
+
+    The frontend sends a POST request with {"filepath": "insights/some-insight-a1b2.md"}
+    and we update the YAML frontmatter status from "active" to "dismissed".
+    """
+    import yaml as _yaml
+    from pathlib import Path as _Path
+
+    filepath = req.filepath
+    full_path = _Path('vault') / filepath
+
+    if not full_path.exists():
+        raise HTTPException(status_code=404, detail="Insight file not found")
+
+    # Read the file
+    text = full_path.read_text(encoding='utf-8')
+    if not text.startswith('---'):
+        raise HTTPException(status_code=400, detail="Invalid memory file format")
+
+    parts = text.split('---', 2)
+    if len(parts) < 3:
+        raise HTTPException(status_code=400, detail="Invalid memory file format")
+
+    try:
+        fm = _yaml.safe_load(parts[1]) or {}
+    except _yaml.YAMLError:
+        raise HTTPException(status_code=400, detail="Invalid YAML frontmatter")
+
+    # Update status
+    fm['status'] = 'dismissed'
+
+    # Rewrite the file
+    yaml_str = _yaml.dump(fm, default_flow_style=False, sort_keys=False)
+    updated = f"---\n{yaml_str.strip()}\n---{parts[2]}"
+    full_path.write_text(updated, encoding='utf-8')
+
+    return {"status": "success", "message": f"Insight dismissed: {filepath}"}
 
 
 # ============================================================================

@@ -120,4 +120,5 @@ MEMORY_TYPES = [
     'people',          # People you interact with ("Sarah — CTO at Acme")
     'commitments',     # Promises and deadlines ("review PRs by Friday")
     'action_required', # Items that need your attention, prioritized by Eisenhower matrix
+    'insights',        # Cross-correlation intelligence derived from vault analysis
 ]
