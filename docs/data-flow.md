@@ -43,6 +43,11 @@ flowchart LR
         Actions --> RA[Reconciliation Agent]
         RA -->|heuristic + LLM + sent emails| StatusUpdates[Update status fields]
     end
+
+    subgraph "Step 9: Insights"
+        StatusUpdates --> IA[Insights Agent]
+        IA -->|Claude API + vault + graph| Insights["insights/ files"]
+    end
 ```
 
 ### Batch processing detail
@@ -57,7 +62,7 @@ flowchart LR
 ### Progress events (SSE)
 
 Each pipeline stage emits progress events via callback to queue to SSE:
-- `fetching` → `email_reader` (per batch) → `memory_writer` → `graph_rebuild` → `action_agent` → `reconciliation` → `complete`
+- `fetching` → `email_reader` (per batch) → `memory_writer` → `graph_rebuild` → `action_agent` → `reconciliation` → `insights` → `complete`
 
 ## Reconciliation Pipeline
 
@@ -89,6 +94,21 @@ flowchart LR
 ```
 
 Triggered via `GET /api/stream/refresh` (SSE) or chat keywords. The Action Agent reads the full vault and `_graph.json`, then creates/updates Eisenhower-classified action items.
+
+## Insights Pipeline
+
+```mermaid
+flowchart LR
+    Trigger["Build Step 6 or 'insights' command"] --> IA[Insights Agent]
+    IA -->|read vault + graph| Context[Full Vault Context]
+    Context --> IA
+    IA -->|check existing insights| Dedup{Duplicate?}
+    Dedup -->|No| Write[Write insight files]
+    Dedup -->|Yes| Skip[Skip]
+    IA -->|Claude API| Write
+```
+
+Triggered via `GET /api/stream/insights` (SSE) or chat keywords (`insights`, `patterns`, `connections`). The Insights Agent reads the full vault and graph, cross-correlates across 2+ source memories, and creates up to 3 insight files per run.
 
 ## Query Pipeline
 

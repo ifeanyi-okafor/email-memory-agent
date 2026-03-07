@@ -28,6 +28,7 @@ Related: [[other-memory-filename]]
 | `people` | `vault/people/` | "Sarah Chen — CTO at Acme Corp" |
 | `commitments` | `vault/commitments/` | "Review PRs by Friday" |
 | `action_required` | `vault/action_required/` | "Follow up with Alice on contract review" |
+| `insights` | `vault/insights/` | "Sarah and Mike both work on API platforms but aren't connected" |
 
 ### Commitment Frontmatter
 
@@ -54,6 +55,45 @@ Commitment status values:
 | `confirmed` | User RSVP'd, registered, replied "yes", or explicitly accepted |
 | `declined` | User explicitly declined, cancelled, or opted out |
 | `tentative` | User expressed interest but hasn't confirmed |
+
+### Insights Frontmatter
+
+`insights` files represent cross-correlation intelligence derived from vault analysis:
+
+```yaml
+---
+title: "Sarah and Mike both work on API platforms"
+date: "2026-03-07"
+category: insights
+memoryType: insights
+priority: "🟡"
+insight_type: "relationship"
+confidence: "high"
+status: "active"
+source_memories:
+  - people/sarah-chen-a1b2.md
+  - people/mike-torres-c3d4.md
+tags: ["api", "networking"]
+related_to: ["Sarah Chen", "Mike Torres"]
+---
+```
+
+Insight type values:
+
+| Type | Meaning |
+| ---- | ------- |
+| `relationship` | Hidden connections between people, organizations, or topics |
+| `execution_gap` | Commitments or action items that are stalled or overdue |
+| `strategic_pattern` | Recurring themes, priority imbalances, or behavioral patterns |
+
+Insight status values:
+
+| Status | Meaning |
+| ------ | ------- |
+| `active` | Insight is current and relevant (default) |
+| `dismissed` | User dismissed the insight via chat or UI |
+
+Confidence values: `high`, `medium`
 
 ### Action Required Frontmatter
 

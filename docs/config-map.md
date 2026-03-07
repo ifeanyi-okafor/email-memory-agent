@@ -53,7 +53,7 @@
 
 | Setting | Default | Purpose |
 |---------|---------|---------|
-| `MEMORY_TYPES` | `['decisions', 'people', 'commitments', 'action_required']` | Valid vault categories |
+| `MEMORY_TYPES` | `['decisions', 'people', 'commitments', 'action_required', 'insights']` | Valid vault categories |
 
 ## Frontend Defaults (index.html)
 

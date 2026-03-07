@@ -20,10 +20,12 @@ All endpoints served by FastAPI on `http://localhost:8000`.
 | GET | `/api/build/status` | No | Check build pipeline state | — | `{status, stage, message, step, started_at, finished_at, stats, source}` |
 | GET | `/api/stream/build` | Yes | Run email→memory pipeline | Query: `days_back`, `max_emails`, `gmail_query` | SSE stream (409 if build already running) |
 | GET | `/api/stream/refresh` | No | Run Action Agent (standalone) | — | SSE stream |
+| GET | `/api/stream/insights` | No | Run Insights Agent (standalone) | — | SSE stream |
+| POST | `/api/insights/dismiss` | No | Dismiss an active insight | `{filepath: string}` | `{status, message}` |
 
 SSE event shape (build):
 ```json
-{"stage": "fetching|email_reader|memory_writer|graph_rebuild|action_agent|reconciliation|complete|error", "status": "started|in_progress|complete|error", "message": "...", "stats": {...}}
+{"stage": "fetching|email_reader|memory_writer|graph_rebuild|action_agent|reconciliation|insights|complete|error", "status": "started|in_progress|complete|error", "message": "...", "stats": {...}}
 ```
 
 SSE event shape (refresh):
@@ -46,6 +48,8 @@ Certain keywords in the question trigger pipeline actions instead of Q&A:
 | `build`, `scan`, `read email`, `fetch email`, `process email`, `analyze email`, `ingest` | Build pipeline |
 | `refresh`, `prioritize`, `actions`, `action items`, `what needs attention`, `priorities` | Action Agent refresh |
 | `reconcile`, `update actions`, `action status`, `check actions` | Reconciliation Agent |
+| `dismiss insight`, `dismiss all insights` | Dismiss active insights |
+| `insights`, `patterns`, `what am i missing`, `cross-correlate`, `connections` | Insights generation |
 | `deduplicate`, `dedup`, `clean vault`, `fix duplicates` | Vault deduplication cleanup |
 | `stats`, `statistics`, `how many`, `vault info` | Vault statistics |
 

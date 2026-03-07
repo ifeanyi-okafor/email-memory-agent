@@ -37,7 +37,8 @@ stateDiagram-v2
         memory_writer --> graph_rebuild: Files written
         graph_rebuild --> action_agent: Graph rebuilt
         action_agent --> reconciliation: Actions generated
-        reconciliation --> [*]: Statuses updated
+        reconciliation --> insights: Statuses updated
+        insights --> [*]: Insights generated
     }
 ```
 
@@ -91,6 +92,19 @@ stateDiagram-v2
 - **Default**: `invited` — the LLM must have explicit evidence to set any other status
 - **Evidence for confirmed**: words like "registered", "RSVP'd", "signed up", "accepted", "will attend"
 - **Status is set at write time** by the Memory Writer Agent based on email content analysis
+
+## Insight Status Lifecycle
+
+Tracks the lifecycle of cross-correlation insights.
+
+```mermaid
+stateDiagram-v2
+    [*] --> active: InsightsAgent creates insight
+    active --> dismissed: User dismisses via chat or UI button
+```
+
+- **Default**: `active` -- insight is current and relevant
+- **Dismissed**: User explicitly dismissed via "dismiss insight" chat command or the dismiss button in the vault UI
 
 ## Conversation State
 

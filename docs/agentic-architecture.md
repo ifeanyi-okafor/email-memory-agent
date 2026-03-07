@@ -9,6 +9,7 @@
 | Query Agent | `agents/query_agent.py` | Searches the vault and answers user questions conversationally | Any non-keyword chat message |
 | Action Agent | `agents/action_agent.py` | Scans vault + knowledge graph, creates Eisenhower-prioritized action items | Build pipeline step 4, or "refresh" keyword |
 | Reconciliation Agent | `agents/reconciliation_agent.py` | Compares action items against sent emails, updates status (active/closed/expired) | Build pipeline step 5, or "reconcile" keyword |
+| Insights Agent | `agents/insights_agent.py` | Cross-correlates vault to discover relationships, execution gaps, and strategic patterns | Build pipeline step 6, or "insights" keyword |
 
 ## Agent Tools
 
@@ -54,24 +55,35 @@ graph LR
         RA_T4[write_memory]
         RA_T5[fetch_sent_emails]
     end
+
+    subgraph "Insights Agent"
+        IA_T1[get_vault_index]
+        IA_T2[search_vault]
+        IA_T3[read_memory]
+        IA_T4[list_memories]
+        IA_T5[get_graph]
+        IA_T6[traverse_graph]
+        IA_T7[write_memory]
+        IA_T8[get_vault_stats]
+    end
 ```
 
 ## Tool Permission Matrix
 
 Each agent receives only the tools it needs — **no agent has universal access**. This matrix shows exactly which tools each agent can call:
 
-| Tool | EmailReader | MemoryWriter | QueryAgent | ActionAgent | ReconciliationAgent |
-| ---- | :-: | :-: | :-: | :-: | :-: |
-| `read_emails` | **R** | | | | |
-| `fetch_sent_emails` | | | | | **R** |
-| `write_memory` | | **W** | | **W** | **W** |
-| `read_memory` | | **R** | **R** | **R** | **R** |
-| `search_vault` | | **R** | **R** | **R** | **R** |
-| `list_memories` | | **R** | **R** | **R** | **R** |
-| `get_vault_index` | | | **R** | **R** | |
-| `get_vault_stats` | | **R** | **R** | | |
-| `get_graph` | | | **R** | **R** | |
-| `traverse_graph` | | | **R** | **R** | |
+| Tool | EmailReader | MemoryWriter | QueryAgent | ActionAgent | ReconciliationAgent | InsightsAgent |
+| ---- | :-: | :-: | :-: | :-: | :-: | :-: |
+| `read_emails` | **R** | | | | | |
+| `fetch_sent_emails` | | | | | **R** | |
+| `write_memory` | | **W** | | **W** | **W** | **W** |
+| `read_memory` | | **R** | **R** | **R** | **R** | **R** |
+| `search_vault` | | **R** | **R** | **R** | **R** | **R** |
+| `list_memories` | | **R** | **R** | **R** | **R** | **R** |
+| `get_vault_index` | | | **R** | **R** | | **R** |
+| `get_vault_stats` | | **R** | **R** | **R** | | **R** |
+| `get_graph` | | | **R** | **R** | | **R** |
+| `traverse_graph` | | | **R** | **R** | | **R** |
 
 **R** = read-only, **W** = write
 
@@ -80,7 +92,8 @@ Key observations:
 - **QueryAgent is strictly read-only** — it cannot modify the vault
 - **EmailReader only talks to Gmail** — no vault tools at all
 - **ReconciliationAgent is the only agent with `fetch_sent_emails`** — sent mail access is tightly scoped
-- Vault read tools (`search_vault`, `read_memory`, `list_memories`) are the closest to "universal" — 4 of 5 agents have them
+- **InsightsAgent has the same tool set as ActionAgent** — both read the full vault + graph and write memory files
+- Vault read tools (`search_vault`, `read_memory`, `list_memories`) are the closest to "universal" — 5 of 6 agents have them
 
 ## Orchestration Flow
 
@@ -90,6 +103,8 @@ flowchart TD
     ORCH -->|"build, scan, ingest"| BUILD[Build Pipeline]
     ORCH -->|"refresh, prioritize"| REFRESH[Action Agent]
     ORCH -->|"reconcile, check actions"| RECONCILE[Reconciliation Agent]
+    ORCH -->|"dismiss insight"| DISMISS[Dismiss Insights]
+    ORCH -->|"insights, patterns"| INSIGHTS[Insights Agent]
     ORCH -->|"deduplicate, clean vault"| DEDUP[Dedup Cleanup]
     ORCH -->|"stats, how many"| STATS[Vault Stats]
     ORCH -->|anything else| QUERY[Query Agent]
@@ -100,7 +115,8 @@ flowchart TD
     B3 --> B4[Step 3.5: Rebuild knowledge graph]
     B4 --> B5[Step 4: Action Agent - generate action items]
     B5 --> B6[Step 5: Reconciliation Agent - update statuses]
-    B6 --> DONE[Complete]
+    B6 --> B7[Step 6: Insights Agent - cross-correlate vault]
+    B7 --> DONE[Complete]
 ```
 
 ## Build Pipeline Sequence
@@ -114,6 +130,7 @@ sequenceDiagram
     participant MW as MemoryWriterAgent
     participant AA as ActionAgent
     participant RA as ReconciliationAgent
+    participant IA as InsightsAgent
     participant Gmail as Gmail API
     participant Vault as Memory Vault
 
@@ -143,6 +160,10 @@ sequenceDiagram
     RA->>Gmail: fetch_sent_emails()
     RA->>Vault: read action items
     RA->>Vault: write_memory(updated status)
+
+    OR->>IA: run("Generate insights")
+    IA->>Vault: read vault + graph
+    IA->>Vault: write_memory(insights)
 
     OR-->>API: complete event
     API-->>FE: SSE: stage=complete
@@ -176,6 +197,7 @@ flowchart LR
     ER[Email Reader] -->|"JSON observations text"| MW[Memory Writer]
     MW -->|"vault files on disk"| AA[Action Agent]
     AA -->|"vault files on disk"| RA[Reconciliation Agent]
+    RA -->|"vault files on disk"| IA[Insights Agent]
 ```
 
 - Email Reader output is a raw JSON string passed as a prompt to Memory Writer
@@ -187,7 +209,7 @@ flowchart LR
 | MCP Server | File | Exposed Tools | Used By |
 |------------|------|---------------|---------|
 | Gmail MCP | `mcp_servers/gmail_server.py` | `read_emails`, `fetch_sent_emails` | Email Reader, Reconciliation Agent |
-| Memory MCP | `mcp_servers/memory_server.py` | `write_memory`, `read_memory`, `search_vault`, `list_memories`, `get_vault_index`, `get_vault_stats`, `get_graph`, `traverse_graph` | Memory Writer, Query Agent, Action Agent, Reconciliation Agent |
+| Memory MCP | `mcp_servers/memory_server.py` | `write_memory`, `read_memory`, `search_vault`, `list_memories`, `get_vault_index`, `get_vault_stats`, `get_graph`, `traverse_graph` | Memory Writer, Query Agent, Action Agent, Reconciliation Agent, Insights Agent |
 
 ## Key Design Decisions
 

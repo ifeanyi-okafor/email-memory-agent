@@ -47,8 +47,9 @@ Improve agent intelligence, vault quality, and add new memory types.
 - [x] 3.9 Commitment status property (invited/confirmed/declined/tentative lifecycle tracking)
 - [x] 3.10 Eisenhower matrix UI (clickable 2x2 quadrant grid with live counts and filtering)
 - [x] 3.11 Vault UI polish (premium Eisenhower matrix, semantic status badges, category icon chips, stagger animations, enhanced content viewer)
-- [ ] 3.12 Memory confidence scoring and source attribution
-- [ ] 3.13 Query Agent context window optimization
+- [x] 3.12 Insights Agent — cross-correlates vault to discover relationships, execution gaps, strategic patterns
+- [ ] 3.13 Memory confidence scoring and source attribution
+- [ ] 3.14 Query Agent context window optimization
 
 ## Phase 4: Polish & Deployment
 Production hardening, performance, and deployment.

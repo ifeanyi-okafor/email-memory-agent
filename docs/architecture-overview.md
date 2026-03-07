@@ -18,6 +18,7 @@ graph TB
         MW[MemoryWriterAgent]
         AA[ActionAgent]
         RA[ReconciliationAgent]
+        IA[InsightsAgent]
         QA[QueryAgent]
     end
 
@@ -48,6 +49,7 @@ graph TB
     Router --> MW
     Router --> AA
     Router --> RA
+    Router --> IA
     Router --> QA
     ER --> GS
     ER --> OR
@@ -62,6 +64,9 @@ graph TB
     RA --> GS
     RA --> OR
     RA -.->|fallback| Claude
+    IA --> MS
+    IA --> OR
+    IA -.->|fallback| Claude
     QA --> MS
     QA --> OR
     QA -.->|fallback| Claude
@@ -85,6 +90,7 @@ graph TB
 | Query Agent | `agents/query_agent.py` | Searches vault + answers questions via Claude |
 | Action Agent | `agents/action_agent.py` | Scans vault + graph, creates Eisenhower-prioritized action items |
 | Reconciliation Agent | `agents/reconciliation_agent.py` | Compares action items vs sent emails, updates status (active/closed/expired) |
+| Insights Agent | `agents/insights_agent.py` | Cross-correlates vault to discover relationships, execution gaps, strategic patterns |
 | Base Agent | `agents/base_agent.py` | Agentic loop, tool-call handling, LLM provider adapter |
 | Gmail MCP | `mcp_servers/gmail_server.py` | Exposes Gmail API as MCP tools |
 | Memory MCP | `mcp_servers/memory_server.py` | Exposes vault read/write as MCP tools |

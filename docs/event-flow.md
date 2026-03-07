@@ -33,6 +33,9 @@ sequenceDiagram
     Pipeline Thread->>Queue: {stage: reconciliation, status: started}
     Queue->>Browser: data: {...}
 
+    Pipeline Thread->>Queue: {stage: insights, status: started}
+    Queue->>Browser: data: {...}
+
     Pipeline Thread->>Queue: {stage: complete, status: complete, stats: {...}}
     Queue->>Browser: data: {...}
 
@@ -44,7 +47,7 @@ sequenceDiagram
 
 ```json
 {
-  "stage": "fetching | email_reader | memory_writer | graph_rebuild | action_agent | reconciliation | complete | error",
+  "stage": "fetching | email_reader | memory_writer | graph_rebuild | action_agent | reconciliation | insights | complete | error",
   "status": "started | in_progress | complete | error",
   "message": "Human-readable progress text",
   "stats": {"total": 15, "decisions": 3, "people": 5, "commitments": 7}
@@ -96,5 +99,33 @@ sequenceDiagram
     Queue->>Browser: data: {...}
 
     Refresh Thread->>Queue: None (sentinel)
+    FastAPI->>Browser: Connection closed
+```
+
+## SSE — Insights Pipeline (Insights Agent)
+
+Standalone insights generation via `GET /api/stream/insights`. Same SSE pattern (queue + thread + async generator).
+
+```mermaid
+sequenceDiagram
+    participant Browser
+    participant FastAPI
+    participant Queue
+    participant Insights Thread
+
+    Browser->>FastAPI: GET /api/stream/insights
+    FastAPI->>Insights Thread: Start in background
+    FastAPI->>Browser: SSE connection opened
+
+    Insights Thread->>Queue: {stage: insights, status: started}
+    Queue->>Browser: data: {...}
+
+    Insights Thread->>Queue: {stage: insights, status: in_progress, message: "Cross-correlating vault..."}
+    Queue->>Browser: data: {...}
+
+    Insights Thread->>Queue: {stage: complete, status: complete}
+    Queue->>Browser: data: {...}
+
+    Insights Thread->>Queue: None (sentinel)
     FastAPI->>Browser: Connection closed
 ```
