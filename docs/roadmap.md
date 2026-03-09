@@ -48,16 +48,19 @@ Improve agent intelligence, vault quality, and add new memory types.
 - [x] 3.10 Eisenhower matrix UI (clickable 2x2 quadrant grid with live counts and filtering)
 - [x] 3.11 Vault UI polish (premium Eisenhower matrix, semantic status badges, category icon chips, stagger animations, enhanced content viewer)
 - [x] 3.12 Insights Agent — cross-correlates vault to discover relationships, execution gaps, strategic patterns
-- [ ] 3.13 Memory confidence scoring and source attribution
-- [ ] 3.14 Query Agent context window optimization
+- [x] 3.13 Person deduplication with name-only enforcement (strip titles/roles/orgs from names)
+- [x] 3.14 Section-based content merge (holistic update instead of blind append, idempotent)
+- [ ] 3.16 Memory confidence scoring and source attribution
+- [ ] 3.17 Query Agent context window optimization
 
 ## Phase 4: Polish & Deployment
 Production hardening, performance, and deployment.
 
 - [x] 4.1 Build state persistence (page refresh reconnects to running build, not restart)
-- [ ] 4.2 Rate limiting and error recovery improvements
-- [ ] 4.3 Multi-user support (separate vaults per account)
-- [ ] 4.4 Docker containerization
-- [ ] 4.5 Vault export/import (JSON, markdown zip)
-- [ ] 4.6 Background scheduled syncs
-- [ ] 4.7 Performance profiling and optimization
+- [x] 4.2 Incremental email ingestion (scan IDs first, fetch only new emails — 97% API call reduction)
+- [ ] 4.3 Rate limiting and error recovery improvements
+- [ ] 4.4 Multi-user support (separate vaults per account)
+- [ ] 4.5 Docker containerization
+- [ ] 4.6 Vault export/import (JSON, markdown zip)
+- [ ] 4.7 Background scheduled syncs
+- [ ] 4.8 Performance profiling and optimization
