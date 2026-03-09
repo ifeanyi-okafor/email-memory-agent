@@ -4,17 +4,21 @@
 
 ```mermaid
 flowchart LR
-    subgraph "Step 1: Fetch"
-        Gmail[Gmail API] -->|messages.list + get| Emails[Raw Emails JSON]
+    subgraph "Step 1a: Scan IDs"
+        Gmail[Gmail API] -->|"messages.list (1 call)"| IDs[Message IDs]
     end
 
-    subgraph "Step 2: Filter"
-        Emails --> Dedup{Already processed?}
-        Dedup -->|Yes| Skip[Skip]
-        Dedup -->|No| New[New Emails]
+    subgraph "Step 1b: Diff"
+        IDs --> Diff{"In _processed_emails.json?"}
+        Diff -->|Yes| Skip[Skip]
+        Diff -->|No| NewIDs[New IDs]
     end
 
-    subgraph "Step 3: Batch Analyze"
+    subgraph "Step 1c: Fetch New Only"
+        NewIDs -->|"messages.get × N"| New[New Emails JSON]
+    end
+
+    subgraph "Step 2: Batch Analyze"
         New -->|Batches of 10| ER[Email Reader Agent]
         ER -->|Claude API| Observations[Text Observations]
     end
@@ -50,14 +54,15 @@ flowchart LR
     end
 ```
 
-### Batch processing detail
+### Incremental ingestion detail
 
-1. Orchestrator fetches up to 500 emails from last 180 days
-2. Loads `_processed_emails.json`, filters out already-seen IDs
-3. Splits remaining into batches of `EMAIL_BATCH_SIZE` (10)
-4. Each batch sent to `EmailReaderAgent.analyze_batch()` which returns text observations
-5. All observations concatenated and sent to `MemoryWriterAgent.run()` to create vault files. Each `write_memory()` call checks for duplicates via `memory/dedup.py` — if a matching file exists, content is merged instead of creating a new file.
-6. Newly processed IDs saved to `_processed_emails.json`
+1. **Scan IDs (cheap):** `list_email_ids()` calls `messages.list` once to get up to 500 message IDs from last 180 days — no email content is fetched
+2. **Diff:** Loaded IDs are compared against `_processed_emails.json` to identify only new (unprocessed) emails
+3. **Fetch new only:** `fetch_emails_by_ids()` calls `messages.get` only for the new IDs — the primary cost savings (e.g., 17 API calls instead of 501 on incremental rebuild)
+4. Splits new emails into batches of `EMAIL_BATCH_SIZE` (10)
+5. Each batch sent to `EmailReaderAgent.analyze_batch()` which returns text observations
+6. All observations concatenated and sent to `MemoryWriterAgent.run()` to create vault files. Each `write_memory()` call checks for duplicates via `memory/dedup.py` — if a matching file exists, content is merged instead of creating a new file.
+7. Newly processed IDs saved to `_processed_emails.json`
 
 ### Progress events (SSE)
 

@@ -55,8 +55,8 @@ from memory.vault import (
 )
 from memory.graph import rebuild_graph
 
-# Import Gmail fetch function (for direct batched fetching)
-from tools.gmail_tools import fetch_emails
+# Import Gmail fetch functions (incremental: list IDs first, then fetch by ID)
+from tools.gmail_tools import fetch_emails, list_email_ids, fetch_emails_by_ids
 
 # Import batch size config
 from config.settings import EMAIL_BATCH_SIZE
@@ -223,40 +223,57 @@ class Orchestrator:
             border_style="blue"
         ))
 
-        # ── Step 1: Fetch all emails ─────────────────────────
-        console.print("\n[bold cyan]Step 1/5: Fetching emails[/bold cyan]")
+        # ── Step 1: Incremental email scan ────────────────────
+        # Phase 1: List just the message IDs (1 cheap API call)
+        # Phase 2: Diff against already-processed IDs
+        # Phase 3: Fetch full content only for new emails
+        console.print("\n[bold cyan]Step 1/5: Scanning for new emails[/bold cyan]")
         emit({
             "stage": "fetching", "status": "started",
-            "message": f"Fetching up to {max_emails} emails from last {days_back} days..."
+            "message": f"Scanning for new emails from last {days_back} days..."
         })
 
-        emails = fetch_emails(
+        # Phase 1: Get just the IDs (cheap — no email content fetched)
+        all_ids = list_email_ids(
             max_results=max_emails,
             query=gmail_query,
             days_back=days_back
         )
 
-        if not emails:
+        if not all_ids:
             emit({"stage": "complete", "status": "complete",
                   "message": "No emails found matching criteria.", "stats": get_vault_stats()})
             return "No emails found matching your criteria."
 
-        # ── Filter out already-processed emails (incremental processing) ──
+        # Phase 2: Diff against processed IDs to find only new emails
         processed_ids = get_processed_email_ids()
-        original_count = len(emails)
-        emails = [e for e in emails if e['id'] not in processed_ids]
+        new_ids = [mid for mid in all_ids if mid not in processed_ids]
 
-        if not emails:
-            console.print(f"[green]All {original_count} emails already processed[/green]")
+        if not new_ids:
+            console.print(f"[green]All {len(all_ids)} emails already processed[/green]")
             emit({"stage": "complete", "status": "complete",
-                  "message": f"All {original_count} emails already processed. No new emails to analyze.",
+                  "message": f"All {len(all_ids)} emails already processed. No new emails to analyze.",
                   "stats": get_vault_stats()})
             return "All fetched emails have already been processed."
 
-        console.print(f"[green]OK - Fetched {original_count} emails, {len(emails)} new[/green]")
+        console.print(f"   Scanned {len(all_ids)} IDs, {len(new_ids)} are new")
+        emit({
+            "stage": "fetching", "status": "in_progress",
+            "message": f"Found {len(new_ids)} new emails out of {len(all_ids)} total. Fetching content..."
+        })
+
+        # Phase 3: Fetch full content only for new emails (the big savings)
+        emails = fetch_emails_by_ids(new_ids)
+
+        if not emails:
+            emit({"stage": "complete", "status": "complete",
+                  "message": "Failed to fetch any new email content.", "stats": get_vault_stats()})
+            return "Failed to fetch new email content. Try again later."
+
+        console.print(f"[green]OK - Fetched {len(emails)} new emails[/green]")
         emit({
             "stage": "fetching", "status": "complete",
-            "message": f"Fetched {original_count} emails, {len(emails)} new"
+            "message": f"Fetched {len(emails)} new emails (skipped {len(all_ids) - len(new_ids)} already processed)"
         })
 
         # ── Step 2: Batch analyze ────────────────────────────
@@ -373,8 +390,8 @@ class Orchestrator:
         })
 
         # ── Track newly processed email IDs ───────────────────
-        new_ids = processed_ids | {e['id'] for e in emails}
-        save_processed_email_ids(new_ids)
+        updated_ids = processed_ids | {e['id'] for e in emails}
+        save_processed_email_ids(updated_ids)
 
         # ── Step 3.5: Rebuild knowledge graph ──────────────────
         console.print("\n[bold cyan]Step 3.5/5: Rebuilding knowledge graph[/bold cyan]")

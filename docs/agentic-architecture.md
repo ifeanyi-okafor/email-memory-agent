@@ -137,9 +137,11 @@ sequenceDiagram
     FE->>API: GET /api/stream/build (SSE)
     API->>OR: build_memory()
 
-    OR->>Gmail: fetch_emails()
-    Gmail-->>OR: emails[]
-    OR->>OR: Filter already-processed IDs
+    OR->>Gmail: list_email_ids() [1 API call]
+    Gmail-->>OR: message IDs[]
+    OR->>OR: Diff against _processed_emails.json
+    OR->>Gmail: fetch_emails_by_ids(new IDs only)
+    Gmail-->>OR: new emails[]
 
     loop Each batch of 10 emails
         OR->>ER: analyze_batch(batch_json)

@@ -333,6 +333,111 @@ def fetch_emails(max_results: int = 150, query: str = '',
     return emails
 
 
+# ── INCREMENTAL FETCH — LIST IDs THEN FETCH BY ID ─────────────────────
+
+def list_email_ids(max_results: int = 500, query: str = '',
+                   days_back: int = 180) -> list[str]:
+    """
+    List Gmail message IDs matching a query WITHOUT fetching full content.
+
+    This is the "cheap" half of incremental ingestion — it makes one API
+    call to get just the message IDs. The orchestrator can then diff these
+    against already-processed IDs and only fetch full content for new ones.
+
+    Args:
+        max_results: Maximum number of IDs to return.
+        query:       Gmail search filter (same syntax as Gmail search bar).
+        days_back:   How many days back to look.
+
+    Returns:
+        A list of Gmail message ID strings.
+    """
+    service = get_gmail_service()
+
+    # Build the date filter
+    after_date = (datetime.now() - timedelta(days=days_back)).strftime('%Y/%m/%d')
+    full_query = f'after:{after_date}'
+    if query:
+        full_query = f'{query} {full_query}'
+
+    print(f"[SCAN] Listing email IDs (query: '{full_query}', max: {max_results})...")
+
+    # Collect IDs across pages (Gmail returns max 500 per page)
+    all_ids = []
+    page_token = None
+
+    while len(all_ids) < max_results:
+        # Request up to the remaining count (capped at 500 by Gmail API)
+        page_size = min(max_results - len(all_ids), 500)
+        kwargs = {
+            'userId': 'me',
+            'q': full_query,
+            'maxResults': page_size,
+        }
+        if page_token:
+            kwargs['pageToken'] = page_token
+
+        results = service.users().messages().list(**kwargs).execute()
+        messages = results.get('messages', [])
+
+        if not messages:
+            break
+
+        all_ids.extend(msg['id'] for msg in messages)
+
+        # Check for more pages
+        page_token = results.get('nextPageToken')
+        if not page_token:
+            break
+
+    print(f"   Found {len(all_ids)} email IDs")
+    return all_ids
+
+
+def fetch_emails_by_ids(message_ids: list[str]) -> list[dict]:
+    """
+    Fetch full email content for a specific list of message IDs.
+
+    This is the "targeted" half of incremental ingestion — only fetches
+    content for the exact IDs you specify (typically just the new ones
+    that haven't been processed yet).
+
+    Args:
+        message_ids: List of Gmail message ID strings to fetch.
+
+    Returns:
+        A list of email dictionaries (same format as fetch_emails).
+    """
+    if not message_ids:
+        return []
+
+    service = get_gmail_service()
+
+    print(f"[FETCH] Fetching full content for {len(message_ids)} emails...")
+
+    emails = []
+    for msg_id in message_ids:
+        try:
+            msg = service.users().messages().get(
+                userId='me',
+                id=msg_id,
+                format='full'
+            ).execute()
+
+            email_data = _parse_message(msg)
+            if email_data:
+                emails.append(email_data)
+
+        except Exception as e:
+            # Skip individual failures — don't add to processed IDs
+            # so they'll be retried on the next build
+            print(f"   [WARN] Error fetching message {msg_id}: {e}")
+            continue
+
+    print(f"[OK] Successfully fetched {len(emails)} of {len(message_ids)} emails")
+    return emails
+
+
 # ── EMAIL PARSING ──────────────────────────────────────────────────────
 
 def _parse_message(msg: dict) -> dict | None:
