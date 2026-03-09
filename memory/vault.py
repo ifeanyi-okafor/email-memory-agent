@@ -145,7 +145,7 @@ with a one-line description for fast lookup.
 |------|------|-------------|------|
 """
     # Write the content to the index file
-    (VAULT_ROOT / '_index.md').write_text(content)
+    (VAULT_ROOT / '_index.md').write_text(content, encoding='utf-8')
 
 
 # ============================================================================
@@ -280,28 +280,44 @@ def write_memory(
     # Programmatic safety net: catch duplicates the LLM missed.
     # If a matching file already exists, redirect the write there
     # instead of creating a new file with a different slug.
-    from memory.dedup import find_duplicate, merge_contents as dedup_merge
+    from memory.dedup import find_duplicate, merge_contents as dedup_merge, clean_person_name
 
     duplicate_path = find_duplicate(title, memory_type, name=name)
 
     if duplicate_path and duplicate_path.exists():
-        # For non-people types, merge content and frontmatter now.
-        # For people types, let the existing people-update logic below
-        # handle merging — we just redirect the filepath.
-        if memory_type != 'people':
-            new_fm = {'tags': tags or [], 'related_to': related_to or []}
-            if source_emails:
-                new_fm['source_emails'] = source_emails
-            if memory_type == 'commitments' and commitment_status:
-                new_fm['commitment_status'] = commitment_status
-            merged_fm, merged_body = dedup_merge(duplicate_path, content, new_fm)
+        # Build the new frontmatter dict for merging
+        new_fm = {'tags': tags or [], 'related_to': related_to or []}
+        if source_emails:
+            new_fm['source_emails'] = source_emails
+        if memory_type == 'commitments' and commitment_status:
+            new_fm['commitment_status'] = commitment_status
+        if memory_type == 'people':
+            # Include people-specific scalar fields so merge can fill gaps
+            for field_name, field_val in [
+                ('role', role), ('organization', organization),
+                ('email', email), ('phone', phone),
+                ('location', location), ('timezone', timezone),
+            ]:
+                if field_val:
+                    new_fm[field_name] = field_val
 
-            # Preserve the merged tags/related_to for the write below
-            tags = merged_fm.get('tags', tags)
-            related_to = merged_fm.get('related_to', related_to)
-            if not source_emails and merged_fm.get('source_emails'):
-                source_emails = merged_fm['source_emails']
-            content = merged_body
+        merged_fm, merged_body = dedup_merge(duplicate_path, content, new_fm)
+
+        # Preserve merged values for the write below
+        tags = merged_fm.get('tags', tags)
+        related_to = merged_fm.get('related_to', related_to)
+        if not source_emails and merged_fm.get('source_emails'):
+            source_emails = merged_fm['source_emails']
+        content = merged_body
+
+        # For people, also pull back merged scalar fields
+        if memory_type == 'people':
+            role = merged_fm.get('role') or role
+            organization = merged_fm.get('organization') or organization
+            email = merged_fm.get('email') or email
+            phone = merged_fm.get('phone') or phone
+            location = merged_fm.get('location') or location
+            timezone = merged_fm.get('timezone') or timezone
 
         filepath = duplicate_path
         print(f"   [DEDUP] Found existing file, updating: {filepath}")
@@ -333,12 +349,17 @@ def write_memory(
         if not name:
             name = title.split(' — ')[0].strip() if ' — ' in title else title
 
+        # Clean the name: strip titles, roles, organizations.
+        # "Kate Lee - Editor in Chief at Every" → "Kate Lee"
+        # The role/org info belongs in the `role` and `organization` fields, not in the name.
+        name = clean_person_name(name)
+
         # If file already exists, preserve the original creation date
         # so we can track when we first learned about this person.
         original_date = today
         if filepath.exists():
             try:
-                text = filepath.read_text()
+                text = filepath.read_text(encoding='utf-8')
                 if text.startswith('---'):
                     parts = text.split('---', 2)
                     if len(parts) >= 3:
@@ -520,7 +541,7 @@ def write_memory(
 """
 
     # ── Write to disk ──────────────────────────────────────────
-    filepath.write_text(file_content)
+    filepath.write_text(file_content, encoding='utf-8')
 
     # ── Update the master index ────────────────────────────────
     update_index(
@@ -583,7 +604,7 @@ def read_memory(filepath: str) -> dict | None:
         return None
 
     # Read the entire file as text
-    text = full_path.read_text()
+    text = full_path.read_text(encoding='utf-8')
 
     # ── Parse the YAML frontmatter ─────────────────────────────
     # Frontmatter is the section between two "---" lines at the top.
@@ -723,7 +744,7 @@ def search_vault(query: str) -> list[dict]:
         # Check every .md file in this folder
         for md_file in folder.glob('*.md'):
             # Read the file's text
-            text = md_file.read_text()
+            text = md_file.read_text(encoding='utf-8')
 
             # Convert to lowercase for comparison
             text_lower = text.lower()
@@ -767,7 +788,7 @@ def get_vault_index() -> str:
     """
     index_path = VAULT_ROOT / '_index.md'
     if index_path.exists():
-        return index_path.read_text()
+        return index_path.read_text(encoding='utf-8')
     return "Vault index not found."
 
 
@@ -786,7 +807,7 @@ def update_index(filepath: str, memory_type: str, description: str):
     """
     # Read the current index content
     index_path = VAULT_ROOT / '_index.md'
-    content = index_path.read_text()
+    content = index_path.read_text(encoding='utf-8')
 
     # Build the new row for the markdown table
     date = datetime.now().strftime('%Y-%m-%d')
@@ -815,7 +836,7 @@ def update_index(filepath: str, memory_type: str, description: str):
     )
 
     # Write the updated index back to disk
-    index_path.write_text(content)
+    index_path.write_text(content, encoding='utf-8')
 
 
 # ============================================================================

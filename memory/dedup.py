@@ -31,6 +31,97 @@ FUZZY_THRESHOLD = 0.70
 # Content similarity threshold — below this, new content is appended during merge
 CONTENT_SIMILARITY_THRESHOLD = 0.85
 
+# Minimum length for a new section to be considered "substantive" enough to
+# replace an existing section during merge.  Short stubs like "N/A" or
+# "No information" should not overwrite richer existing content.
+_MIN_SUBSTANTIVE_LENGTH = 30
+
+
+# ============================================================================
+# PERSON NAME CLEANING
+# ============================================================================
+
+# Separators that indicate "name — role/title/org" patterns.
+# The LLM and email From fields often produce names like:
+#   "Kate Lee - Editor in Chief at Every"
+#   "Warner Godfrey — Principal Consultant, Engineering at DiUS"
+#   "Me - Product Professional"
+# We strip everything after these separators to get just the name.
+_NAME_SEPARATORS = re.compile(r'\s*[-–—|/]\s*(?=[A-Z])')
+
+# Common role/title keywords that should never be part of a person's name.
+# Used as a fallback when no separator is found but the name looks like
+# "John Smith Senior Engineer" or "John Smith at Acme Corp".
+_ROLE_KEYWORDS = {
+    'at', 'of', 'for',  # prepositions before org names
+    'ceo', 'cto', 'cfo', 'coo', 'cio', 'vp',
+    'president', 'director', 'manager', 'lead', 'head',
+    'engineer', 'developer', 'designer', 'consultant',
+    'analyst', 'specialist', 'coordinator', 'associate',
+    'writer', 'editor', 'author', 'reporter',
+    'professor', 'teacher', 'coach', 'trainer',
+    'founder', 'co-founder', 'partner', 'principal',
+    'senior', 'junior', 'staff', 'chief',
+    'organizer', 'speaker', 'evangelist', 'advocate',
+}
+
+
+def clean_person_name(raw_name: str) -> str:
+    """
+    Extract just the human name from a raw name string, stripping
+    titles, roles, organizations, and other non-name content.
+
+    Examples:
+        "Kate Lee - Editor in Chief at Every"  →  "Kate Lee"
+        "Warner Godfrey — Principal Consultant" →  "Warner Godfrey"
+        "Me - Product Professional"            →  "Me"
+        "Olubankole 'Banky W' Wellington - Speaker at YAIS IV"
+                                               →  "Olubankole 'Banky W' Wellington"
+        "John Smith"                           →  "John Smith"
+
+    Args:
+        raw_name: The raw name string, possibly containing role/title info.
+
+    Returns:
+        The cleaned name containing only the person's actual name.
+    """
+    if not raw_name or not raw_name.strip():
+        return raw_name
+
+    name = raw_name.strip()
+
+    # Step 1: Split on separator characters ( - , — , – )
+    # Take only the part before the first separator that's followed by
+    # what looks like a title/role (starts with uppercase letter).
+    match = _NAME_SEPARATORS.search(name)
+    if match:
+        name = name[:match.start()].strip()
+
+    # Step 2: Check for "at Organization" pattern at the end
+    # e.g., "John Smith at Acme Corp" → "John Smith"
+    at_match = re.search(r'\s+at\s+[A-Z]', name)
+    if at_match:
+        name = name[:at_match.start()].strip()
+
+    # Step 3: Check if remaining tokens contain role keywords
+    # e.g., "John Smith Senior Engineer" → "John Smith"
+    # Only trigger if we find a role keyword AND the name has 3+ words
+    words = name.split()
+    if len(words) >= 3:
+        # Walk backwards through words — find the first role keyword
+        # and truncate there
+        for i in range(len(words) - 1, 0, -1):
+            if words[i].lower().rstrip('.,;:') in _ROLE_KEYWORDS:
+                # Don't truncate if it would leave only 1 word
+                if i >= 2:
+                    name = ' '.join(words[:i]).strip()
+                break
+
+    # Step 4: Clean up any trailing punctuation or whitespace
+    name = name.strip(' ,;:-–—')
+
+    return name if name else raw_name
+
 
 # ============================================================================
 # TITLE NORMALIZATION
@@ -135,25 +226,53 @@ def find_duplicate(title: str, memory_type: str, name: str = None) -> Path | Non
 
 def _find_people_duplicate(title: str, name: str | None, folder: Path) -> Path | None:
     """
-    Find a duplicate people file by matching the `name` frontmatter field.
+    Find a duplicate people file by matching cleaned person names.
+
+    Cleans both the incoming name and existing names to strip roles/titles,
+    then matches on:
+      1. Exact cleaned name match
+      2. One cleaned name is a prefix of the other (handles partial names)
 
     The incoming name is derived from the `name` parameter if provided,
     otherwise extracted from the title before " — ".
     """
-    # Determine the search name
+    # Determine the search name and clean it
     if name:
-        search_name = name.strip().lower()
+        raw_search = name.strip()
     elif ' — ' in title:
-        search_name = title.split(' — ')[0].strip().lower()
+        raw_search = title.split(' — ')[0].strip()
     else:
-        search_name = title.strip().lower()
+        raw_search = title.strip()
+
+    search_clean = clean_person_name(raw_search).lower()
+
+    if not search_clean:
+        return None
+
+    # Special case: "Me" variants all route to me.md
+    if search_clean == 'me' or raw_search.lower().startswith('me '):
+        me_file = folder / 'me.md'
+        if me_file.exists():
+            return me_file
 
     for md_file in folder.glob('*.md'):
         fm = _parse_frontmatter(md_file)
-        existing_name = str(fm.get('name', '')).strip().lower()
+        existing_raw = str(fm.get('name', '')).strip()
+        existing_clean = clean_person_name(existing_raw).lower()
 
-        if existing_name and existing_name == search_name:
+        if not existing_clean:
+            continue
+
+        # Exact match on cleaned names
+        if existing_clean == search_clean:
             return md_file
+
+        # Prefix match: "Kate Lee" matches "Kate Lee - Editor in Chief"
+        # (catches cases where existing file wasn't cleaned yet)
+        if existing_clean.startswith(search_clean) or search_clean.startswith(existing_clean):
+            # Guard: both must be at least 2 chars to avoid false positives
+            if len(search_clean) >= 2 and len(existing_clean) >= 2:
+                return md_file
 
     return None
 
@@ -224,6 +343,95 @@ def _find_non_people_duplicate(title: str, memory_type: str, folder: Path) -> Pa
 
 
 # ============================================================================
+# SECTION PARSING (for intelligent content merging)
+# ============================================================================
+
+def _parse_sections(body: str) -> list[tuple[str, str]]:
+    """
+    Parse a markdown body into an ordered list of (heading, content) tuples.
+
+    The text before the first ## heading is stored under the key '_preamble'.
+    Each ## heading becomes a key; its content runs until the next ## or EOF.
+
+    Returns a list (not dict) to preserve section order and allow duplicate
+    headings (though they shouldn't occur in well-formed files).
+
+    Example:
+        "Overview text\n\n## Contact\nemail\n\n## Notes\nstuff"
+        → [('_preamble', 'Overview text'), ('## Contact', 'email'), ('## Notes', 'stuff')]
+    """
+    sections: list[tuple[str, str]] = []
+    lines = body.split('\n')
+
+    current_heading = '_preamble'
+    current_lines: list[str] = []
+
+    for line in lines:
+        # Detect ## headings (but not # top-level — those are the file title)
+        if line.startswith('## '):
+            # Save the previous section
+            sections.append((current_heading, '\n'.join(current_lines).strip()))
+            current_heading = line.strip()
+            current_lines = []
+        else:
+            current_lines.append(line)
+
+    # Save the last section
+    sections.append((current_heading, '\n'.join(current_lines).strip()))
+
+    return sections
+
+
+def _sections_to_dict(sections: list[tuple[str, str]]) -> dict[str, str]:
+    """Convert section list to dict for lookup. Last value wins on duplicates."""
+    return {heading: content for heading, content in sections}
+
+
+def _sections_to_text(sections: list[tuple[str, str]]) -> str:
+    """Reassemble a section list back into markdown body text."""
+    parts = []
+    for heading, content in sections:
+        if heading == '_preamble':
+            if content:
+                parts.append(content)
+        else:
+            if content:
+                parts.append(f"{heading}\n\n{content}")
+            else:
+                parts.append(heading)
+    return '\n\n'.join(parts)
+
+
+def _extract_dated_entries(ki_content: str) -> dict[str, str]:
+    """
+    Extract dated sub-entries from Key Interactions content.
+
+    Key Interactions sections contain ### YYYY-MM-DD sub-headings with
+    bullet points underneath. Returns {date_string: full_entry_text}.
+    """
+    entries: dict[str, str] = {}
+    current_date = None
+    current_lines: list[str] = []
+
+    for line in ki_content.split('\n'):
+        if line.startswith('### '):
+            # Save previous entry
+            if current_date:
+                entries[current_date] = '\n'.join(current_lines).strip()
+            current_date = line.strip()
+            current_lines = [line]
+        elif current_date:
+            current_lines.append(line)
+        # Lines before any ### date are ignored (shouldn't exist in well-formed files)
+
+    # Save last entry
+    if current_date:
+        entries[current_date] = '\n'.join(current_lines).strip()
+
+    return entries
+
+
+# ============================================================================
 # CONTENT MERGING
 # ============================================================================
 
@@ -253,14 +461,22 @@ def merge_contents(
     # ── Merge frontmatter ─────────────────────────────────────
     merged_fm = dict(existing_fm)
 
+    # People-specific scalar fields that should be UPDATED (not just gap-filled)
+    # when new data provides a non-empty value.  These represent current state
+    # that can change (e.g., a promotion changes role/organization).
+    _UPDATABLE_SCALARS = {'role', 'organization', 'email', 'phone', 'location', 'timezone'}
+
     for key, new_val in new_frontmatter.items():
         if key in ('tags', 'related_to', 'source_emails', 'source_memories'):
             # List fields: union as sets
             existing_list = merged_fm.get(key, []) or []
             new_list = new_val if isinstance(new_val, list) else []
             merged_fm[key] = sorted(set(existing_list) | set(new_list))
+        elif key in _UPDATABLE_SCALARS and new_val:
+            # Updatable scalars: always prefer the latest non-empty value
+            merged_fm[key] = new_val
         elif not merged_fm.get(key) and new_val:
-            # Scalar fields: only fill if existing is empty/falsy
+            # Other scalar fields: only fill if existing is empty/falsy
             merged_fm[key] = new_val
 
     # Always update the 'updated' timestamp
@@ -269,90 +485,163 @@ def merge_contents(
     # ── Merge body content ────────────────────────────────────
     memory_type = merged_fm.get('category', merged_fm.get('memoryType', ''))
 
+    # Strip the leading # heading from existing body before merging.
+    # write_memory() adds its own # heading from frontmatter, so we must
+    # not return one — otherwise the heading gets duplicated.
+    existing_body_clean = re.sub(r'^#\s+[^\n]+\n*', '', existing_body.strip()).strip()
+
+    # Also strip any leading # heading from new content (LLM sometimes
+    # includes it even though write_memory adds one).
+    new_content_clean = re.sub(r'^#\s+[^\n]+\n*', '', new_content.strip()).strip()
+
     if memory_type in ('people', 'person'):
-        merged_body = _merge_people_content(existing_body, new_content)
+        merged_body = _merge_people_content(existing_body_clean, new_content_clean)
     else:
-        merged_body = _merge_generic_content(existing_body, new_content)
+        merged_body = _merge_generic_content(existing_body_clean, new_content_clean)
 
     return merged_fm, merged_body
 
 
 def _merge_people_content(existing_body: str, new_body: str) -> str:
     """
-    Merge people content: append new Key Interactions entries.
-    """
-    # Extract Key Interactions from new content
-    new_interactions = _extract_section(new_body, '## Key Interactions')
+    Merge people content section-by-section.
 
-    if not new_interactions.strip():
-        return existing_body
-
-    # If existing body already has Key Interactions, append to it
-    if '## Key Interactions' in existing_body:
-        # Find the end of the Key Interactions section (next ## or end of file)
-        ki_start = existing_body.index('## Key Interactions')
-        rest_after_ki = existing_body[ki_start + len('## Key Interactions'):]
-
-        # Find next ## heading after Key Interactions
-        next_section = re.search(r'\n## (?!Key Interactions)', rest_after_ki)
-        if next_section:
-            insert_point = ki_start + len('## Key Interactions') + next_section.start()
-            merged = (
-                existing_body[:insert_point].rstrip() + '\n\n' +
-                new_interactions.strip() + '\n\n' +
-                existing_body[insert_point:]
-            )
-        else:
-            merged = existing_body.rstrip() + '\n\n' + new_interactions.strip()
-
-        return merged
-    else:
-        # No existing Key Interactions — append the whole section
-        return existing_body.rstrip() + '\n\n## Key Interactions\n\n' + new_interactions.strip()
-
-
-def _merge_generic_content(existing_body: str, new_body: str) -> str:
-    """
-    Merge non-people content: append new body if substantially different.
-
-    Strips the leading `# Heading` line from existing body before comparing,
-    since existing_body includes it but new_body typically doesn't.
+    Strategy:
+    - Key Interactions: append only NEW dated entries (### YYYY-MM-DD)
+    - Other sections: replace with new version if it's substantive
+      (longer than _MIN_SUBSTANTIVE_LENGTH), otherwise keep existing
+    - New sections not in existing: append at end
+    - Existing sections not in new: preserve as-is
     """
     if not new_body.strip():
         return existing_body
 
-    # Strip leading # heading from existing body for fair comparison
-    existing_for_compare = re.sub(r'^#\s+[^\n]+\n*', '', existing_body.strip()).strip()
-    new_for_compare = new_body.strip()
+    existing_sections = _parse_sections(existing_body)
+    new_sections = _parse_sections(new_body)
 
-    # Check similarity
-    ratio = SequenceMatcher(None, existing_for_compare, new_for_compare).ratio()
+    existing_dict = _sections_to_dict(existing_sections)
+    new_dict = _sections_to_dict(new_sections)
 
-    if ratio >= CONTENT_SIMILARITY_THRESHOLD:
-        # Content is too similar — keep existing
+    # Build merged section list, starting from existing order
+    merged: list[tuple[str, str]] = []
+    seen_headings: set[str] = set()
+
+    for heading, existing_content in existing_sections:
+        seen_headings.add(heading)
+
+        if heading == '## Key Interactions':
+            # Append only new dated entries
+            new_ki = new_dict.get('## Key Interactions', '')
+            merged_ki = _merge_key_interactions(existing_content, new_ki)
+            merged.append((heading, merged_ki))
+
+        elif heading in new_dict:
+            new_content = new_dict[heading]
+            # Replace if new content is substantive
+            if len(new_content.strip()) >= _MIN_SUBSTANTIVE_LENGTH:
+                merged.append((heading, new_content))
+            else:
+                merged.append((heading, existing_content))
+        else:
+            # Section only in existing — preserve
+            merged.append((heading, existing_content))
+
+    # Append sections from new that don't exist in existing
+    for heading, new_content in new_sections:
+        if heading not in seen_headings and new_content.strip():
+            merged.append((heading, new_content))
+
+    return _sections_to_text(merged)
+
+
+def _merge_key_interactions(existing_ki: str, new_ki: str) -> str:
+    """
+    Merge Key Interactions by appending only new dated entries.
+
+    Each entry is a ### YYYY-MM-DD sub-heading with bullets.
+    If a date already exists in existing, skip it (no duplication).
+    """
+    if not new_ki.strip():
+        return existing_ki
+
+    existing_entries = _extract_dated_entries(existing_ki)
+    new_entries = _extract_dated_entries(new_ki)
+
+    # Start with existing content
+    result = existing_ki.rstrip() if existing_ki.strip() else ''
+
+    # Append only dates not already present
+    for date_heading, entry_text in new_entries.items():
+        if date_heading not in existing_entries:
+            if result:
+                result += '\n\n' + entry_text
+            else:
+                result = entry_text
+
+    return result
+
+
+def _merge_generic_content(existing_body: str, new_body: str) -> str:
+    """
+    Merge non-people content section-by-section.
+
+    Strategy:
+    - If both have ## sections: merge per-section (replace existing
+      with new if substantive, preserve sections only in existing,
+      append sections only in new)
+    - If neither has sections (flat prose): keep existing if similar,
+      otherwise replace with new (never append with ---)
+    """
+    if not new_body.strip():
         return existing_body
 
-    # Append new content under a separator
-    return existing_body.rstrip() + '\n\n---\n\n' + new_body.strip()
+    existing_sections = _parse_sections(existing_body)
+    new_sections = _parse_sections(new_body)
 
+    existing_has_sections = any(h != '_preamble' for h, _ in existing_sections)
+    new_has_sections = any(h != '_preamble' for h, _ in new_sections)
 
-def _extract_section(text: str, heading: str) -> str:
-    """
-    Extract the content under a specific markdown ## heading.
-    Returns everything between the heading and the next ## heading (or end of text).
-    """
-    if heading not in text:
-        return ''
+    # ── Both have sections: section-by-section merge ──────────
+    if existing_has_sections or new_has_sections:
+        existing_dict = _sections_to_dict(existing_sections)
+        new_dict = _sections_to_dict(new_sections)
 
-    start = text.index(heading) + len(heading)
-    rest = text[start:]
+        merged: list[tuple[str, str]] = []
+        seen_headings: set[str] = set()
 
-    # Find the next ## heading
-    next_heading = re.search(r'\n## ', rest)
-    if next_heading:
-        return rest[:next_heading.start()].strip()
+        for heading, existing_content in existing_sections:
+            seen_headings.add(heading)
+            if heading in new_dict:
+                new_content = new_dict[heading]
+                if len(new_content.strip()) >= _MIN_SUBSTANTIVE_LENGTH:
+                    merged.append((heading, new_content))
+                else:
+                    merged.append((heading, existing_content))
+            else:
+                merged.append((heading, existing_content))
 
-    return rest.strip()
+        for heading, new_content in new_sections:
+            if heading not in seen_headings and new_content.strip():
+                merged.append((heading, new_content))
+
+        return _sections_to_text(merged)
+
+    # ── Flat prose (no sections): keep existing if similar ────
+    # Strip leading # heading for fair comparison
+    existing_stripped = re.sub(r'^#\s+[^\n]+\n*', '', existing_body.strip()).strip()
+    new_stripped = new_body.strip()
+
+    ratio = SequenceMatcher(None, existing_stripped, new_stripped).ratio()
+
+    if ratio >= CONTENT_SIMILARITY_THRESHOLD:
+        return existing_body
+
+    # New content is substantially different — replace (not append)
+    # Preserve the existing # heading if present
+    heading_match = re.match(r'^(#\s+[^\n]+\n*)', existing_body.strip())
+    if heading_match:
+        return heading_match.group(1) + '\n' + new_stripped
+    return new_body
 
 
 # ============================================================================
@@ -398,10 +687,17 @@ def cleanup_duplicates() -> dict:
             if len(group_files) < 2:
                 continue
 
-            # Sort by date — oldest first (canonical)
+            # Sort by date — oldest first (canonical).
+            # Special case: me.md is ALWAYS canonical for "me" group,
+            # regardless of date, because it's the singleton filename.
             group_files.sort(key=lambda f: _parse_frontmatter(f).get('date', '9999'))
-            canonical = group_files[0]
-            duplicates = group_files[1:]
+            me_file = next((f for f in group_files if f.name == 'me.md'), None)
+            if me_file:
+                canonical = me_file
+                duplicates = [f for f in group_files if f != me_file]
+            else:
+                canonical = group_files[0]
+                duplicates = group_files[1:]
 
             # Merge each duplicate into canonical
             for dup_path in duplicates:
@@ -432,11 +728,22 @@ def cleanup_duplicates() -> dict:
 
 
 def _group_people_files(files: list[Path]) -> dict[str, list[Path]]:
-    """Group people files by normalized name."""
+    """Group people files by cleaned, normalized name.
+
+    Special handling: any file whose cleaned name is "me" OR whose
+    filename is "me.md" gets grouped under the "me" key, so all
+    "Me" variants merge into the canonical me.md file.
+    """
     groups = {}
     for f in files:
         fm = _parse_frontmatter(f)
-        name = str(fm.get('name', '')).strip().lower()
+        raw_name = str(fm.get('name', '')).strip()
+        name = clean_person_name(raw_name).lower() if raw_name else f.stem
+
+        # Route me.md and all "Me - ..." variants to the same group
+        if f.name == 'me.md' or name == 'me':
+            name = 'me'
+
         if not name:
             name = f.stem  # fallback to filename
         if name not in groups:
@@ -486,6 +793,13 @@ def _group_non_people_files(files: list[Path]) -> dict[str, list[Path]]:
 
 def _rewrite_file(filepath: Path, frontmatter: dict, body: str):
     """Rewrite a vault file with updated frontmatter and body."""
+    # Clean person names before rewriting (skip me.md — it stores the real name)
+    if filepath.name != 'me.md':
+        if frontmatter.get('category') in ('people', 'person') or frontmatter.get('memoryType') in ('people', 'person'):
+            raw_name = frontmatter.get('name', '')
+            if raw_name:
+                frontmatter['name'] = clean_person_name(raw_name)
+
     yaml_str = yaml.dump(frontmatter, default_flow_style=False, sort_keys=False)
 
     # Determine the heading — people use name, others use title
