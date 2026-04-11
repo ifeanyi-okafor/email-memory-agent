@@ -22,7 +22,7 @@ from collections import deque
 VAULT_ROOT = Path('vault')
 
 # The memory type folders to scan for graph nodes
-MEMORY_CATEGORIES = ['decisions', 'people', 'commitments', 'action_required']
+MEMORY_CATEGORIES = ['decisions', 'people', 'commitments', 'action_required', 'organizations', 'projects']
 
 GRAPH_FILE = VAULT_ROOT / '_graph.json'
 

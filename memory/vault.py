@@ -63,11 +63,13 @@ VAULT_ROOT = Path('vault')
 # Each one gets its own subfolder inside the vault.
 # This is the "taxonomy" — the classification system for memories.
 MEMORY_TYPES = [
-    'decisions',       # Choices: "chose React over Vue"
-    'people',          # Contacts: "Sarah — CTO at Acme" (also captures preferences, topics, comm style)
-    'commitments',     # Promises: "review PRs by Friday"
-    'action_required', # Action items: prioritized by Eisenhower matrix with justification
-    'insights',        # Cross-correlation intelligence derived from vault analysis
+    'decisions',        # Choices: "chose React over Vue"
+    'people',           # Contacts: "Sarah — CTO at Acme"
+    'commitments',      # Promises: "review PRs by Friday"
+    'action_required',  # Action items: prioritized by Eisenhower matrix
+    'insights',         # Cross-correlation intelligence
+    'organizations',    # Companies, teams, institutions the user interacts with
+    'projects',         # Initiatives, deals, products the user is involved in
 ]
 
 
