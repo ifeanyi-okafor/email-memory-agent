@@ -41,6 +41,7 @@ graph TB
         Graph[vault/_graph.json — knowledge graph]
         Token[config/token file]
         Processed[vault/_processed_emails.json]
+        Changelog[vault/_changelog.md — audit log]
     end
 
     UI -->|HTTP + SSE| API
@@ -110,3 +111,4 @@ graph TB
 - **Keyword routing** — simple string matching in orchestrator (not LLM-based)
 - **Multi-provider LLM** — OpenRouter (default, Kimi K2.5) with automatic Anthropic fallback. Adapter in `base_agent.py` converts between OpenAI and Anthropic message formats.
 - **Incremental processing** — tracks processed email IDs in `_processed_emails.json`
+- **Audit trail** — `_changelog.md` is an append-only log of all vault mutations (created/updated/merged). Logic in `memory/changelog.py`.

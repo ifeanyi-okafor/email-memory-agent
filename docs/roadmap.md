@@ -50,6 +50,7 @@ Improve agent intelligence, vault quality, and add new memory types.
 - [x] 3.12 Insights Agent — cross-correlates vault to discover relationships, execution gaps, strategic patterns
 - [x] 3.13 Person deduplication with name-only enforcement (strip titles/roles/orgs from names)
 - [x] 3.14 Section-based content merge (holistic update instead of blind append, idempotent)
+- [x] 3.15 Append-only vault changelog for audit trail (`memory/changelog.py`)
 - [ ] 3.16 Memory confidence scoring and source attribution
 - [ ] 3.17 Query Agent context window optimization
 

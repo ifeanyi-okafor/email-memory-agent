@@ -91,7 +91,11 @@ def append_changelog(action: str, filepath: str, description: str):
     # ── Build the table row ────────────────────────────────────
     # Format: "| 2026-04-11 14:30:00 | CREATED | people/file.md | Title |"
     # We use "now()" to get the exact moment this mutation happened.
+    # Sanitize pipe characters in filepath and description to prevent
+    # breaking the markdown table structure.
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    filepath = str(filepath).replace('|', '-')
+    description = str(description).replace('|', '-')
     row = f"| {timestamp} | {action} | {filepath} | {description} |\n"
 
     # ── Append to the file ─────────────────────────────────────
@@ -160,6 +164,9 @@ def read_changelog(last_n: int = None) -> str:
     # ── Slice to the last N rows ───────────────────────────────
     # Python's list slicing makes this easy:
     # [-3:] gives us the last 3 elements of a list.
+    # Guard against last_n=0: data_rows[-0:] returns ALL rows, not empty.
+    if last_n <= 0:
+        return '\n'.join(header_lines)
     limited_rows = data_rows[-last_n:]
 
     # ── Reassemble the output ──────────────────────────────────

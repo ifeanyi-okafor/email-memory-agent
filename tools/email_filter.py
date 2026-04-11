@@ -52,8 +52,10 @@ AUTOMATED_SENDER_PATTERNS = [
 
 # Combine all patterns into one regex with | (OR) for efficiency.
 # re.IGNORECASE makes it match "NoReply@" and "NOREPLY@" too.
+# The negative lookbehind (?<![a-zA-Z]) ensures we don't match mid-word,
+# e.g. "anews@company.com" should NOT match the "news@" pattern.
 _AUTOMATED_SENDER_RE = re.compile(
-    '|'.join(AUTOMATED_SENDER_PATTERNS),
+    r'(?<![a-zA-Z])(?:' + '|'.join(AUTOMATED_SENDER_PATTERNS) + r')',
     re.IGNORECASE
 )
 

@@ -174,6 +174,24 @@ Graph logic lives in `memory/graph.py`. Backlinks are auto-injected into file fr
 
 Loaded into a Python `set` for O(1) lookup during filtering.
 
+## Vault Changelog (`_changelog.md`)
+
+Append-only audit log of all vault mutations. Every `write_memory()` call appends a timestamped row. Logic in `memory/changelog.py`.
+
+| File | Format | Purpose |
+|------|--------|---------|
+| `vault/_changelog.md` | Markdown table | Records every vault create/update/merge |
+
+```markdown
+| Timestamp | Action | File | Description |
+|-----------|--------|------|-------------|
+| 2026-04-11 14:30:00 | CREATED | people/sarah-chen-a1b2.md | Sarah Chen |
+| 2026-04-11 14:30:01 | UPDATED | people/sarah-chen-a1b2.md | Sarah Chen |
+| 2026-04-11 14:30:02 | MERGED | people/sarah-chen-a1b2.md | Sarah Chen |
+```
+
+Action values: `CREATED`, `UPDATED`, `MERGED`
+
 ## Session Storage (Frontend)
 
 Conversations are saved in `sessionStorage` (browser-only, cleared on tab close):
