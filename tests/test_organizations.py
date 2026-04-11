@@ -158,3 +158,41 @@ class TestWriteOrganization:
         assert Path(path1).name == Path(path2).name
         files = list((vault / 'organizations').glob('*.md'))
         assert len(files) == 1
+
+
+class TestOrganizationInKnowledgeIndex:
+    def test_org_appears_in_index(self, tmp_path, monkeypatch):
+        """After writing an org, it should appear in the Knowledge Index."""
+        vault = _setup_vault(tmp_path, monkeypatch)
+        import memory.knowledge_index
+        monkeypatch.setattr(memory.knowledge_index, 'VAULT_ROOT', vault)
+
+        with patch('memory.graph.rebuild_graph', return_value={'nodes': {}, 'edges': []}):
+            from memory.vault import write_memory
+            write_memory(
+                title="Stripe", memory_type="organizations",
+                content="## Overview\n\nPayments.", org_domain="stripe.com",
+            )
+
+        from memory.knowledge_index import build_knowledge_index
+        index = build_knowledge_index()
+        assert 'Stripe' in index
+        assert 'stripe.com' in index
+
+
+class TestOrganizationInChangelog:
+    def test_org_write_logged(self, tmp_path, monkeypatch):
+        """Writing an org should create a changelog entry."""
+        vault = _setup_vault(tmp_path, monkeypatch)
+
+        with patch('memory.graph.rebuild_graph', return_value={'nodes': {}, 'edges': []}):
+            from memory.vault import write_memory
+            write_memory(
+                title="Acme Corp", memory_type="organizations",
+                content="## Overview\n\nSoftware.",
+            )
+
+        from memory.changelog import read_changelog
+        changelog = read_changelog()
+        assert 'CREATED' in changelog
+        assert 'Acme Corp' in changelog
