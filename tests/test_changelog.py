@@ -232,3 +232,78 @@ class TestReadChangelog:
         # false matches like "Item 10" containing "Item 1".
         assert "Item 1 |" not in result
         assert "Item 7 |" not in result
+
+
+# ============================================================================
+# INTEGRATION — write_memory triggers changelog
+# ============================================================================
+
+class TestChangelogIntegration:
+    def test_write_memory_appends_to_changelog(self, tmp_path, monkeypatch):
+        """write_memory() should append an entry to the changelog."""
+        vault = tmp_path / 'vault'
+        vault.mkdir()
+        for mtype in ('decisions', 'people', 'commitments', 'action_required', 'insights'):
+            (vault / mtype).mkdir()
+        (vault / '_index.md').write_text(
+            '---\ntitle: "Vault Index"\n---\n\n| File | Type | Description | Date |\n|------|------|-------------|------|\n'
+        )
+
+        import memory.vault
+        import memory.changelog
+        import memory.dedup
+        monkeypatch.setattr(memory.vault, 'VAULT_ROOT', vault)
+        monkeypatch.setattr(memory.dedup, 'VAULT_ROOT', vault)
+        monkeypatch.setattr(memory.changelog, 'CHANGELOG_FILE', vault / '_changelog.md')
+
+        from unittest.mock import patch
+        with patch('memory.graph.rebuild_graph', return_value={'nodes': {}, 'edges': []}):
+            from memory.vault import write_memory
+            write_memory(
+                title="Test Decision",
+                memory_type="decisions",
+                content="We decided to test.",
+            )
+
+        changelog_path = vault / '_changelog.md'
+        assert changelog_path.exists()
+        content = changelog_path.read_text(encoding='utf-8')
+        assert 'CREATED' in content
+        assert 'Test Decision' in content
+
+    def test_duplicate_write_shows_updated(self, tmp_path, monkeypatch):
+        """Writing the same person twice should show UPDATED in changelog."""
+        vault = tmp_path / 'vault'
+        vault.mkdir()
+        for mtype in ('decisions', 'people', 'commitments', 'action_required', 'insights'):
+            (vault / mtype).mkdir()
+        (vault / '_index.md').write_text(
+            '---\ntitle: "Vault Index"\n---\n\n| File | Type | Description | Date |\n|------|------|-------------|------|\n'
+        )
+
+        import memory.vault
+        import memory.changelog
+        import memory.dedup
+        monkeypatch.setattr(memory.vault, 'VAULT_ROOT', vault)
+        monkeypatch.setattr(memory.dedup, 'VAULT_ROOT', vault)
+        monkeypatch.setattr(memory.changelog, 'CHANGELOG_FILE', vault / '_changelog.md')
+
+        from unittest.mock import patch
+        with patch('memory.graph.rebuild_graph', return_value={'nodes': {}, 'edges': []}):
+            from memory.vault import write_memory
+            write_memory(
+                title="Bob Smith — Engineer",
+                memory_type="people",
+                content="## Overview\n\nEngineer.",
+                name="Bob Smith",
+            )
+            write_memory(
+                title="Bob Smith — Senior Engineer",
+                memory_type="people",
+                content="## Overview\n\nPromoted to Senior Engineer.",
+                name="Bob Smith",
+            )
+
+        content = (vault / '_changelog.md').read_text(encoding='utf-8')
+        assert 'CREATED' in content
+        assert 'UPDATED' in content
