@@ -20,6 +20,7 @@ graph TB
         RA[ReconciliationAgent]
         IA[InsightsAgent]
         QA[QueryAgent]
+        VLA[VaultLintAgent]
     end
 
     subgraph "MCP Servers"
@@ -52,6 +53,8 @@ graph TB
     Router --> RA
     Router --> IA
     Router --> QA
+    Router --> VLA
+    VLA --> MS
     ER --> GS
     ER --> OR
     ER -.->|fallback| Claude
@@ -102,6 +105,10 @@ graph TB
 | Changelog | `memory/changelog.py` | Append-only audit log of vault mutations |
 | Email filter | `tools/email_filter.py` | Heuristic noise classifier (skips newsletters, receipts, notifications) |
 | Gmail tools | `tools/gmail_tools.py` | OAuth, email fetching, auth checks |
+| Vault Lint | `memory/vault_lint.py` | Pure-function lint checks (stale action items, orphaned files, empty content) |
+| Vault Lint Agent | `agents/vault_lint_agent.py` | Formats vault lint results into human-readable health report |
+| Change Detection | `memory/change_detection.py` | SHA-256 hash-based file change tracking |
+| Scheduler | `memory/scheduler.py` | Lightweight task scheduler with JSON config and state persistence |
 | Config | `config/settings.py` | Central settings (paths, model, limits) |
 
 ## Key Design Decisions
@@ -117,3 +124,7 @@ graph TB
 - **Audit trail** — `_changelog.md` is an append-only log of all vault mutations (created/updated/merged). Logic in `memory/changelog.py`.
 - **Knowledge Index** — `memory/knowledge_index.py` scans all vault files and builds a compact markdown table of entities (name, filepath, key fields). Injected into MemoryWriter prompt before each run so the LLM can resolve against existing entities, reducing duplicates.
 - **Email noise filter** — `tools/email_filter.py` classifies emails as signal/noise using Gmail labels, sender patterns, subject keywords, and body markers. Runs between email fetch and batch analysis, saving tokens and reducing vault clutter.
+- **Organizations and projects as entity types** — `organizations` and `projects` are first-class vault memory types alongside `people`, `decisions`, and `commitments`. Each has type-specific frontmatter: organizations carry `domain`, `industry`, and `relationship_type`; projects carry `project_status` and `project_type`. Both appear in the Knowledge Index for entity resolution.
+- **Vault linting** — `memory/vault_lint.py` provides pure-function lint checks for vault health (stale action items, orphaned files, empty content). `agents/vault_lint_agent.py` formats results into a human-readable report. Triggered via `lint`/`health check`/`vault health` keywords.
+- **Change detection** — `memory/change_detection.py` tracks SHA-256 hashes of vault files in `_file_state.json`, enabling efficient detection of which files changed between runs.
+- **Background scheduling** — `memory/scheduler.py` is a lightweight task scheduler driven by a JSON config file (`config/scheduled_tasks.example.json`). State is persisted between runs. The `--run-scheduled` CLI flag in `main.py` executes any due tasks without starting the web server.

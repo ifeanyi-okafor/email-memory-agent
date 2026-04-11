@@ -29,6 +29,8 @@ Related: [[other-memory-filename]]
 | `commitments` | `vault/commitments/` | "Review PRs by Friday" |
 | `action_required` | `vault/action_required/` | "Follow up with Alice on contract review" |
 | `insights` | `vault/insights/` | "Sarah and Mike both work on API platforms but aren't connected" |
+| `organizations` | `vault/organizations/` | "Acme Corp — SaaS company, client relationship" |
+| `projects` | `vault/projects/` | "Project Atlas — active internal product initiative" |
 
 ### Commitment Frontmatter
 
@@ -55,6 +57,47 @@ Commitment status values:
 | `confirmed` | User RSVP'd, registered, replied "yes", or explicitly accepted |
 | `declined` | User explicitly declined, cancelled, or opted out |
 | `tentative` | User expressed interest but hasn't confirmed |
+
+### Organization Frontmatter
+
+`organizations` files include type-specific fields for tracking company relationships:
+
+```yaml
+---
+title: "Acme Corp"
+type: "organizations"
+date: "2026-04-11"
+domain: "acme.com"
+industry: "SaaS"
+relationship_type: "client"
+tags: ["saas", "client"]
+related_to: ["Sarah Chen", "contract-review"]
+source: "email"
+---
+```
+
+`relationship_type` values: `client`, `vendor`, `partner`, `employer`, `investor`, or any free-form label.
+
+### Project Frontmatter
+
+`projects` files include type-specific fields for tracking initiatives:
+
+```yaml
+---
+title: "Project Atlas"
+type: "projects"
+date: "2026-04-11"
+project_status: "active"
+project_type: "internal"
+tags: ["product", "q2-initiative"]
+related_to: ["Sarah Chen", "Acme Corp"]
+source: "email"
+---
+```
+
+`project_status` values: `active`, `paused`, `completed`, `cancelled`
+
+`project_type` values: `internal`, `client`, `open-source`, or any free-form label.
 
 ### Insights Frontmatter
 
@@ -218,6 +261,47 @@ Produces a markdown string with one table per memory type:
 ```
 
 Purpose: gives the MemoryWriter a compact view of all existing entities so it can resolve names/titles against what already exists instead of creating duplicates.
+
+## Change Detection (`_file_state.json`)
+
+Tracks SHA-256 hashes of vault files to detect changes between runs. Logic in `memory/change_detection.py`.
+
+| File                      | Format                        | Purpose                                        |
+|---------------------------|-------------------------------|------------------------------------------------|
+| `vault/_file_state.json`  | JSON object (filepath → hash) | Records last-known hash for every vault file   |
+
+```json
+{
+  "people/sarah-chen-a1b2.md": "e3b0c44298fc1c149afb...",
+  "decisions/chose-react-a1b2.md": "a87ff679a2f3e71d9181..."
+}
+```
+
+On each run, `change_detection.py` computes fresh hashes, compares against the stored state, and returns a set of changed/added/removed file paths. The state file is updated after processing.
+
+## Scheduler Config and State
+
+The background task scheduler (`memory/scheduler.py`) is driven by a JSON config file and persists run state separately.
+
+| File                                 | Format                                    | Purpose                                                           |
+|--------------------------------------|-------------------------------------------|-------------------------------------------------------------------|
+| `config/scheduled_tasks.json`        | JSON array of task definitions            | User-defined schedule (copy from `scheduled_tasks.example.json`)  |
+| `config/scheduled_tasks_state.json`  | JSON object (task id → last run timestamp)| Persists last-run time across process restarts                    |
+
+Example config (`config/scheduled_tasks.example.json`):
+
+```json
+[
+  {
+    "id": "daily-build",
+    "task": "build",
+    "schedule": "0 8 * * *",
+    "enabled": true
+  }
+]
+```
+
+Tasks are executed by running `python main.py --run-scheduled`. The scheduler checks each enabled task against the current time and its last-run state, then fires any that are due.
 
 ## Session Storage (Frontend)
 

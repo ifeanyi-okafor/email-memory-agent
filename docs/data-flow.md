@@ -64,6 +64,24 @@ flowchart LR
     end
 ```
 
+## Lint Pipeline (Vault Health Check)
+
+Triggered via `lint`, `health check`, or `vault health` keywords. The Vault Lint Agent runs pure-function checks against the vault and returns a formatted report — it does not write any files.
+
+```mermaid
+flowchart LR
+    Trigger["User says 'lint' / 'health check' / 'vault health'"] --> VLA[Vault Lint Agent]
+    VLA -->|read vault files| Checks[Lint checks]
+    Checks --> Stale[Stale action items]
+    Checks --> Orphaned[Orphaned files]
+    Checks --> Empty[Empty content]
+    Stale --> Report[Human-readable report]
+    Orphaned --> Report
+    Empty --> Report
+```
+
+Logic in `memory/vault_lint.py` (pure functions) and `agents/vault_lint_agent.py` (report formatter).
+
 ### Incremental ingestion detail
 
 1. **Scan IDs (cheap):** `list_email_ids()` calls `messages.list` once to get up to 500 message IDs from last 180 days — no email content is fetched

@@ -4,12 +4,13 @@
 
 | Agent | File | Role | Trigger |
 |-------|------|------|---------|
-| Email Reader | `agents/email_reader.py` | Fetches emails from Gmail and produces structured JSON observations about the user (including `commitment_status` for commitments) | Build pipeline step 2 |
-| Memory Writer | `agents/memory_writer.py` | Converts observations into structured vault files (YAML frontmatter + markdown). Sets `commitment_status` for commitment files. Receives a Knowledge Index in its prompt for entity resolution. | Build pipeline step 3 |
+| Email Reader | `agents/email_reader.py` | Fetches emails from Gmail and produces structured JSON observations about the user (including `commitment_status` for commitments, and observations for `organizations` and `projects`) | Build pipeline step 2 |
+| Memory Writer | `agents/memory_writer.py` | Converts observations into structured vault files (YAML frontmatter + markdown). Sets `commitment_status` for commitments, `project_status`/`project_type` for projects, and `domain`/`industry`/`relationship_type` for organizations. Receives a Knowledge Index in its prompt for entity resolution. | Build pipeline step 3 |
 | Query Agent | `agents/query_agent.py` | Searches the vault and answers user questions conversationally | Any non-keyword chat message |
 | Action Agent | `agents/action_agent.py` | Scans vault + knowledge graph, creates Eisenhower-prioritized action items | Build pipeline step 4, or "refresh" keyword |
 | Reconciliation Agent | `agents/reconciliation_agent.py` | Compares action items against sent emails, updates status (active/closed/expired) | Build pipeline step 5, or "reconcile" keyword |
 | Insights Agent | `agents/insights_agent.py` | Cross-correlates vault to discover relationships, execution gaps, and strategic patterns | Build pipeline step 6, or "insights" keyword |
+| Vault Lint Agent | `agents/vault_lint_agent.py` | Runs vault health checks (stale action items, orphaned files, empty content) and formats results into a human-readable report | "lint", "health check", or "vault health" keyword |
 
 ## Agent Tools
 
@@ -107,6 +108,7 @@ flowchart TD
     ORCH -->|"insights, patterns"| INSIGHTS[Insights Agent]
     ORCH -->|"deduplicate, clean vault"| DEDUP[Dedup Cleanup]
     ORCH -->|"stats, how many"| STATS[Vault Stats]
+    ORCH -->|"lint, health check, vault health"| LINT[Vault Lint Agent]
     ORCH -->|anything else| QUERY[Query Agent]
 
     BUILD --> B1[Step 1: Fetch emails via Gmail API]
