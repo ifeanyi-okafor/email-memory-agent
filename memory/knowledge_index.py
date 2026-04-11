@@ -14,59 +14,24 @@
 # the full file body. This keeps it fast even with hundreds of vault files.
 # ============================================================================
 
-import yaml
 from pathlib import Path
+
+from memory.dedup import _parse_frontmatter
+from memory.vault import MEMORY_TYPES
 
 
 # Vault root — same as vault.py and dedup.py.
 # Patched in tests via monkeypatch for isolation.
 VAULT_ROOT = Path('vault')
 
-# The five memory type folders in the vault, in display order.
-# Each gets its own section in the knowledge index.
-MEMORY_TYPES = [
-    'people',
-    'decisions',
-    'commitments',
-    'action_required',
-    'insights',
-]
-
 
 # ============================================================================
-# FRONTMATTER PARSING
+# UTILITIES
 # ============================================================================
 
-def _parse_frontmatter(filepath: Path) -> dict:
-    """
-    Read a markdown file and return its YAML frontmatter as a dict.
-
-    WHY a separate parser instead of importing vault.read_memory()?
-    Because this module needs to be lightweight and self-contained —
-    it's called during prompt construction, so we want minimal import
-    overhead and no dependency on the full vault machinery.
-
-    Returns empty dict on any error (missing file, bad encoding,
-    malformed YAML) so callers never need to handle exceptions.
-    """
-    try:
-        text = filepath.read_text(encoding='utf-8')
-    except (OSError, UnicodeDecodeError):
-        return {}
-
-    # Frontmatter lives between two "---" markers at the top of the file.
-    # Files without frontmatter are gracefully ignored.
-    if not text.startswith('---'):
-        return {}
-
-    parts = text.split('---', 2)
-    if len(parts) < 3:
-        return {}
-
-    try:
-        return yaml.safe_load(parts[1]) or {}
-    except yaml.YAMLError:
-        return {}
+def _safe(value: str) -> str:
+    """Escape pipe characters so they don't break markdown table structure."""
+    return str(value).replace('|', '\\|')
 
 
 # ============================================================================
@@ -179,10 +144,10 @@ def _build_people_rows() -> list[str]:
     for md_file in sorted(folder.glob('*.md')):
         fm = _parse_frontmatter(md_file)
         rel_path = md_file.relative_to(VAULT_ROOT).as_posix()
-        name = fm.get('name', '')
-        email = fm.get('email', '')
-        org = fm.get('organization', '')
-        role = fm.get('role', '')
+        name = _safe(fm.get('name', ''))
+        email = _safe(fm.get('email', ''))
+        org = _safe(fm.get('organization', ''))
+        role = _safe(fm.get('role', ''))
         rows.append(f'| {rel_path} | {name} | {email} | {org} | {role} |')
     return rows
 
@@ -197,11 +162,11 @@ def _build_decisions_rows() -> list[str]:
     for md_file in sorted(folder.glob('*.md')):
         fm = _parse_frontmatter(md_file)
         rel_path = md_file.relative_to(VAULT_ROOT).as_posix()
-        title = fm.get('title', '')
-        date = fm.get('date', '')
+        title = _safe(fm.get('title', ''))
+        date = _safe(fm.get('date', ''))
         # Tags is a list in frontmatter — join into comma-separated string
         tags_list = fm.get('tags', [])
-        tags = ', '.join(str(t) for t in tags_list) if tags_list else ''
+        tags = _safe(', '.join(str(t) for t in tags_list) if tags_list else '')
         rows.append(f'| {rel_path} | {title} | {date} | {tags} |')
     return rows
 
@@ -216,9 +181,9 @@ def _build_commitments_rows() -> list[str]:
     for md_file in sorted(folder.glob('*.md')):
         fm = _parse_frontmatter(md_file)
         rel_path = md_file.relative_to(VAULT_ROOT).as_posix()
-        title = fm.get('title', '')
-        status = fm.get('commitment_status', '')
-        date = fm.get('date', '')
+        title = _safe(fm.get('title', ''))
+        status = _safe(fm.get('commitment_status', ''))
+        date = _safe(fm.get('date', ''))
         rows.append(f'| {rel_path} | {title} | {status} | {date} |')
     return rows
 
@@ -233,9 +198,9 @@ def _build_action_items_rows() -> list[str]:
     for md_file in sorted(folder.glob('*.md')):
         fm = _parse_frontmatter(md_file)
         rel_path = md_file.relative_to(VAULT_ROOT).as_posix()
-        title = fm.get('title', '')
-        status = fm.get('status', '')
-        quadrant = fm.get('quadrant', '')
+        title = _safe(fm.get('title', ''))
+        status = _safe(fm.get('status', ''))
+        quadrant = _safe(fm.get('quadrant', ''))
         rows.append(f'| {rel_path} | {title} | {status} | {quadrant} |')
     return rows
 
@@ -250,8 +215,8 @@ def _build_insights_rows() -> list[str]:
     for md_file in sorted(folder.glob('*.md')):
         fm = _parse_frontmatter(md_file)
         rel_path = md_file.relative_to(VAULT_ROOT).as_posix()
-        title = fm.get('title', '')
-        insight_type = fm.get('insight_type', '')
-        status = fm.get('status', '')
+        title = _safe(fm.get('title', ''))
+        insight_type = _safe(fm.get('insight_type', ''))
+        status = _safe(fm.get('status', ''))
         rows.append(f'| {rel_path} | {title} | {insight_type} | {status} |')
     return rows
