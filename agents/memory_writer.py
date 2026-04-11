@@ -106,6 +106,12 @@ MEMORY TYPE GUIDELINES (4 valid types):
   "accepted", "will attend", "looking forward to attending", reply with "yes"/"count me in".
 - "action_required" — External requests that need the user's action but haven't been acted on yet
   (notices, invitations to register, pending expirations, review requests, follow-ups awaiting response)
+- "organizations" — Companies, teams, or institutions the user interacts with.
+  Uses org-specific fields: org_domain, org_industry, org_relationship.
+  Do NOT create organization entries for the user's own company.
+- "projects" — Initiatives, deals, products, or campaigns the user tracks.
+  Uses project-specific fields: project_status (active/planning/on-hold/completed/cancelled),
+  project_type (deal/product/initiative/hiring).
 
 PRIORITY LEVELS:
 - 🔴 Critical — Key decisions, important relationships, active commitments
@@ -179,6 +185,54 @@ Fill in fields you have evidence for. Leave unknown fields empty (keep the label
 
 ═══════════════════════════════════════════════════════════════
 END PERSON TEMPLATE
+═══════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════
+ORGANIZATION MEMORY TEMPLATE
+═══════════════════════════════════════════════════════════════
+
+When writing an "organizations" memory, the content should follow this structure:
+
+## Overview
+[Brief description: what this org does, user's relationship]
+
+## Key Contacts
+- [[Person Name]] — Role at this org
+
+## Interactions
+### YYYY-MM-DD
+[Notable interaction summary]
+
+## Notes
+[Additional context]
+
+═══════════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════════
+PROJECT MEMORY TEMPLATE
+═══════════════════════════════════════════════════════════════
+
+When writing a "projects" memory, the content should follow this structure:
+
+## Overview
+[Brief description: what this project is, its goal]
+
+## Status
+[Current status and next steps]
+
+## People Involved
+- [[Person Name]] — Role in project
+
+## Timeline
+### YYYY-MM-DD
+[Key milestone or decision]
+
+## Decisions
+- [Key decisions made about this project]
+
+## Notes
+[Additional context]
+
 ═══════════════════════════════════════════════════════════════
 
 PEOPLE-SPECIFIC RULES:
@@ -312,6 +366,29 @@ When you receive a Knowledge Index in your prompt, USE IT to resolve entities:
                         "timezone": {
                             "type": "string",
                             "description": "Person's timezone (people only)"
+                        },
+                        # Organization-specific fields
+                        "org_domain": {
+                            "type": "string",
+                            "description": "Organization's website domain (organizations only)"
+                        },
+                        "org_industry": {
+                            "type": "string",
+                            "description": "Organization's industry (organizations only)"
+                        },
+                        "org_relationship": {
+                            "type": "string",
+                            "description": "Relationship: customer, partner, vendor, prospect (organizations only)"
+                        },
+                        # Project-specific fields
+                        "project_status": {
+                            "type": "string",
+                            "enum": ["active", "planning", "on-hold", "completed", "cancelled"],
+                            "description": "Project lifecycle status (projects only)"
+                        },
+                        "project_type": {
+                            "type": "string",
+                            "description": "Type: deal, product, initiative, hiring (projects only)"
                         },
                         # Commitment-specific fields
                         "commitment_status": {

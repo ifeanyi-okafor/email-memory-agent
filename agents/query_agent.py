@@ -64,9 +64,11 @@ class QueryAgent(BaseAgent):
         self.system_prompt = """You are the Query Agent — the conversational interface to a memory vault.
 
 The memory vault contains structured memories about a person, extracted from their emails.
-Memories are organized by type: decisions, people, commitments, action_required, insights.
+Memories are organized by type: decisions, people, commitments, action_required, insights, organizations, projects.
 Action items are classified by Eisenhower matrix (urgent-important, important-not-urgent, urgent-not-important, neither).
 Insights are cross-correlation intelligence (relationship, execution_gap, strategic_pattern) with active/dismissed status.
+Organizations capture companies/institutions with domain, industry, and relationship type (customer/partner/vendor/prospect).
+Projects capture initiatives/deals with status (active/planning/on-hold/completed/cancelled) and type (deal/product/initiative/hiring).
 The vault has a knowledge graph (_graph.json) that maps bidirectional relationships between all memories.
 Preferences, topics of interest, and communication style are captured within person files.
 

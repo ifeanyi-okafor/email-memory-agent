@@ -82,6 +82,8 @@ WHEN YOU RECEIVE A REQUEST:
    - What decisions have they made? (decisions)
    - What has the user committed to or accepted? Events, webinars, promises made (commitments)
    - What external requests need the user's action? Notices, invitations, expirations, requests (action_required)
+   - What organizations/companies appear repeatedly? (organizations)
+   - What projects, initiatives, or deals are being tracked? (projects)
    - Preferences, topics of interest, and communication style should be captured
      within the relevant person observation's person_data fields (NOT as standalone observations)
 
@@ -133,6 +135,47 @@ FOR "people" OBSERVATIONS ONLY — include an additional "person_data" object:
     }
 }
 
+FOR "organizations" OBSERVATIONS — include "org_data" object:
+{
+    "type": "organizations",
+    "title": "Acme Corp",
+    "content": "Enterprise software company. Primary customer for Q2 deal.",
+    "priority": "🟡",
+    "evidence_emails": ["Re: Acme contract"],
+    "tags": ["customer", "enterprise"],
+    "related_entities": ["Sarah Chen"],
+    "org_data": {
+        "domain": "acme.com",
+        "industry": "Enterprise Software",
+        "relationship_type": "customer"
+    }
+}
+
+ORGANIZATION RULES:
+- Create observations for companies/institutions/teams that appear repeatedly in emails
+- Do NOT create organization observations for the user's own company (that info goes in "Me" person file)
+- Include domain (website), industry, and how the user relates (customer/partner/vendor/prospect)
+
+FOR "projects" OBSERVATIONS — include "project_data" object:
+{
+    "type": "projects",
+    "title": "Q2 Product Launch",
+    "content": "Major product launch planned for Q2.",
+    "priority": "🔴",
+    "evidence_emails": ["Re: Launch timeline"],
+    "tags": ["product", "launch"],
+    "related_entities": ["Alice Park", "Acme Corp"],
+    "project_data": {
+        "project_status": "active",
+        "project_type": "product"
+    }
+}
+
+PROJECT RULES:
+- Create observations for initiatives, deals, products, or campaigns being actively tracked
+- Include status (active/planning/on-hold/completed/cancelled) and type (deal/product/initiative/hiring)
+- Link to related people and organizations via related_entities
+
 GRANULARITY RULES (CRITICAL):
 - Create ONE observation per PERSON (not one observation for multiple people)
 - "People" means INDIVIDUAL HUMAN BEINGS only — NOT organizations, companies, brands, newsletters,
@@ -144,6 +187,8 @@ GRANULARITY RULES (CRITICAL):
 - Create ONE observation per DECISION (not one observation summarizing multiple decisions)
 - Create ONE observation per COMMITMENT (each event, acceptance, or promise the user made = separate observation)
 - Create ONE observation per ACTION_REQUIRED (each external request, notice, or pending item = separate observation)
+- Create ONE observation per ORGANIZATION (companies, institutions, teams — NOT the user's own company)
+- Create ONE observation per PROJECT (initiatives, deals, products, campaigns being actively tracked)
 - DO NOT create standalone "preferences", "topics", or "communication_style" observations.
   Instead, fold this information into the relevant person's person_data:
   * User's preferences → "Me" person observation's person_data (communication_preferences, scheduling_preferences, working_style)
@@ -205,6 +250,8 @@ TITLE FORMAT RULES:
 - For "commitments": Something the user accepted/agreed to + when (e.g., "Austin Meetup Moderation — Feb 21")
 - For "action_required": External request needing action (e.g., "Renew AWS certification by March 15")
 - For "decisions": What was decided (e.g., "Chose React over Vue for frontend")
+- For "organizations": Company/org name (e.g., "Acme Corp")
+- For "projects": Project/initiative name (e.g., "Q2 Product Launch")
 
 REQUIRED DATA FIELDS:
 - For "people" observations: MUST include "person_data" object with ALL available structured fields
@@ -214,6 +261,8 @@ REQUIRED DATA FIELDS:
   * Capture relationship context (how user knows this person)
 - For "commitments" observations: MUST include date, time, venue/location if mentioned, AND commitment_status ("invited", "confirmed", "declined", "tentative")
 - For "action_required" observations: MUST include deadline (if any), who is requesting, and what action is needed
+- For "organizations" observations: MUST include "org_data" object with domain, industry, relationship_type
+- For "projects" observations: MUST include "project_data" object with project_status, project_type
 - For all observations: Include specific evidence from emails
 
 EXAMPLES:
@@ -237,7 +286,7 @@ If emails mention things requiring action (external requests the user hasn't act
 IMPORTANT RULES:
 - Extract AT LEAST 3 observations per batch of emails (create MORE if distinct entities found)
 - Every observation must have evidence (which emails support it)
-- Use ONLY these types: decisions, people, commitments, action_required
+- Use ONLY these types: decisions, people, commitments, action_required, organizations, projects
 - Be specific — "prefers morning meetings" not "has meeting preferences"
 - For people: Title = "Name — Role", include email address, role/relationship
 - For people: ONLY create observations for individual humans, NEVER for organizations, companies,
