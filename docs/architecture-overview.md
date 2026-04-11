@@ -98,6 +98,9 @@ graph TB
 | Vault helpers | `memory/vault.py` | Init, search, stats, read/write, processed ID tracking |
 | Dedup module | `memory/dedup.py` | Programmatic duplicate detection + merging + cleanup |
 | Knowledge graph | `memory/graph.py` | Bidirectional graph: rebuild, traverse, backlink injection |
+| Knowledge Index | `memory/knowledge_index.py` | Builds compact entity catalog for agent prompt injection |
+| Changelog | `memory/changelog.py` | Append-only audit log of vault mutations |
+| Email filter | `tools/email_filter.py` | Heuristic noise classifier (skips newsletters, receipts, notifications) |
 | Gmail tools | `tools/gmail_tools.py` | OAuth, email fetching, auth checks |
 | Config | `config/settings.py` | Central settings (paths, model, limits) |
 
@@ -112,3 +115,5 @@ graph TB
 - **Multi-provider LLM** — OpenRouter (default, Kimi K2.5) with automatic Anthropic fallback. Adapter in `base_agent.py` converts between OpenAI and Anthropic message formats.
 - **Incremental processing** — tracks processed email IDs in `_processed_emails.json`
 - **Audit trail** — `_changelog.md` is an append-only log of all vault mutations (created/updated/merged). Logic in `memory/changelog.py`.
+- **Knowledge Index** — `memory/knowledge_index.py` scans all vault files and builds a compact markdown table of entities (name, filepath, key fields). Injected into MemoryWriter prompt before each run so the LLM can resolve against existing entities, reducing duplicates.
+- **Email noise filter** — `tools/email_filter.py` classifies emails as signal/noise using Gmail labels, sender patterns, subject keywords, and body markers. Runs between email fetch and batch analysis, saving tokens and reducing vault clutter.

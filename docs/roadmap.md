@@ -51,8 +51,12 @@ Improve agent intelligence, vault quality, and add new memory types.
 - [x] 3.13 Person deduplication with name-only enforcement (strip titles/roles/orgs from names)
 - [x] 3.14 Section-based content merge (holistic update instead of blind append, idempotent)
 - [x] 3.15 Append-only vault changelog for audit trail (`memory/changelog.py`)
-- [ ] 3.16 Memory confidence scoring and source attribution
-- [ ] 3.17 Query Agent context window optimization
+- [x] 3.16 Knowledge Index — pre-built entity catalog injected into MemoryWriter prompt for entity resolution (`memory/knowledge_index.py`)
+- [x] 3.17 Email noise filter — heuristic classifier skips newsletters/receipts/notifications before LLM processing (`tools/email_filter.py`)
+- [x] 3.18 Knowledge Index wired into build pipeline (orchestrator builds index, injects into MemoryWriter prompt)
+- [x] 3.19 Email noise filter wired into build pipeline (filter between fetch and batch analyze)
+- [ ] 3.20 Memory confidence scoring and source attribution
+- [ ] 3.21 Query Agent context window optimization
 
 ## Phase 4: Polish & Deployment
 Production hardening, performance, and deployment.
