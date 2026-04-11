@@ -239,6 +239,9 @@ def write_memory(
     org_domain: str = None,
     org_industry: str = None,
     org_relationship: str = None,
+    # Project-specific fields (optional, only used when memory_type == 'projects')
+    project_status: str = None,
+    project_type: str = None,
 ) -> str:
     """
     Create or update a memory file in the vault.
@@ -519,6 +522,41 @@ def write_memory(
 {content}
 """
 
+    elif memory_type == 'projects':
+        # ── Project-specific frontmatter ──────────────────────
+        # Projects are initiatives, deals, or products the user tracks.
+        # They have a status lifecycle and a type classification.
+        frontmatter = {
+            'title': title,
+            'date': today,
+            'updated': today,
+            'category': 'projects',
+            'memoryType': 'projects',
+            'priority': priority,
+            'project_status': project_status or 'active',
+            'project_type': project_type or '',
+            'tags': tags or [],
+            'related_to': related_to or [],
+        }
+        if source_emails:
+            frontmatter['source_emails'] = source_emails
+
+        wiki_links_section = ''
+        if related_to:
+            links = ', '.join([f'[[{entity}]]' for entity in related_to])
+            wiki_links_section = f'\n**Related:** {links}\n'
+
+        yaml_str = yaml.dump(frontmatter, default_flow_style=False, sort_keys=False)
+        file_content = f"""---
+{yaml_str.strip()}
+---
+
+# {title}
+
+{wiki_links_section}
+{content}
+"""
+
     elif memory_type == 'commitments':
         # ── Commitment-specific frontmatter ─────────────────────
         # Includes commitment_status to track participation lifecycle:
@@ -753,6 +791,8 @@ def list_memories(memory_type: str = None) -> list[dict]:
                     'domain': mem['frontmatter'].get('domain') if mtype == 'organizations' else None,
                     'industry': mem['frontmatter'].get('industry') if mtype == 'organizations' else None,
                     'relationship_type': mem['frontmatter'].get('relationship_type') if mtype == 'organizations' else None,
+                    'project_status': mem['frontmatter'].get('project_status') if mtype == 'projects' else None,
+                    'project_type': mem['frontmatter'].get('project_type') if mtype == 'projects' else None,
                 })
 
     return memories
