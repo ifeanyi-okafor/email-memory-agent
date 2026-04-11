@@ -68,3 +68,93 @@ class TestOrganizationsRegistered:
         """'projects' should be in the graph scan categories."""
         from memory.graph import MEMORY_CATEGORIES
         assert 'projects' in MEMORY_CATEGORIES
+
+
+class TestWriteOrganization:
+    def test_write_organization_creates_file(self, tmp_path, monkeypatch):
+        """write_memory with memory_type='organizations' should create a file."""
+        vault = _setup_vault(tmp_path, monkeypatch)
+
+        with patch('memory.graph.rebuild_graph', return_value={'nodes': {}, 'edges': []}):
+            from memory.vault import write_memory
+            filepath = write_memory(
+                title="Acme Corp",
+                memory_type="organizations",
+                content="## Overview\n\nEnterprise software company.",
+                tags=["enterprise", "software"],
+                org_domain="acme.com",
+                org_industry="Technology",
+                org_relationship="customer",
+            )
+
+        assert Path(filepath).exists()
+        text = Path(filepath).read_text(encoding='utf-8')
+        fm = yaml.safe_load(text.split('---')[1])
+
+        assert fm['title'] == 'Acme Corp'
+        assert fm['category'] == 'organizations'
+        assert fm['domain'] == 'acme.com'
+        assert fm['industry'] == 'Technology'
+        assert fm['relationship_type'] == 'customer'
+
+    def test_organization_frontmatter_has_all_fields(self, tmp_path, monkeypatch):
+        """Organization files should have domain, industry, relationship_type in frontmatter."""
+        vault = _setup_vault(tmp_path, monkeypatch)
+
+        with patch('memory.graph.rebuild_graph', return_value={'nodes': {}, 'edges': []}):
+            from memory.vault import write_memory
+            filepath = write_memory(
+                title="Stripe",
+                memory_type="organizations",
+                content="## Overview\n\nPayment processing.",
+                org_domain="stripe.com",
+                org_industry="Fintech",
+                org_relationship="partner",
+            )
+
+        text = Path(filepath).read_text(encoding='utf-8')
+        fm = yaml.safe_load(text.split('---')[1])
+        assert 'domain' in fm
+        assert 'industry' in fm
+        assert 'relationship_type' in fm
+        assert fm['memoryType'] == 'organizations'
+
+    def test_organization_with_empty_fields(self, tmp_path, monkeypatch):
+        """Organization with no optional fields should still write successfully."""
+        vault = _setup_vault(tmp_path, monkeypatch)
+
+        with patch('memory.graph.rebuild_graph', return_value={'nodes': {}, 'edges': []}):
+            from memory.vault import write_memory
+            filepath = write_memory(
+                title="Unknown Corp",
+                memory_type="organizations",
+                content="## Overview\n\nLittle information available.",
+            )
+
+        assert Path(filepath).exists()
+        text = Path(filepath).read_text(encoding='utf-8')
+        fm = yaml.safe_load(text.split('---')[1])
+        assert fm['domain'] == ''
+        assert fm['industry'] == ''
+        assert fm['relationship_type'] == ''
+
+    def test_organization_dedup(self, tmp_path, monkeypatch):
+        """Writing the same org twice should merge into one file."""
+        vault = _setup_vault(tmp_path, monkeypatch)
+
+        with patch('memory.graph.rebuild_graph', return_value={'nodes': {}, 'edges': []}):
+            from memory.vault import write_memory
+            path1 = write_memory(
+                title="Acme Corp", memory_type="organizations",
+                content="## Overview\n\nSoftware company.", tags=["software"],
+                org_domain="acme.com",
+            )
+            path2 = write_memory(
+                title="Acme Corp", memory_type="organizations",
+                content="## Overview\n\nUpdated: enterprise software.", tags=["enterprise"],
+                org_industry="Enterprise Software",
+            )
+
+        assert Path(path1).name == Path(path2).name
+        files = list((vault / 'organizations').glob('*.md'))
+        assert len(files) == 1
