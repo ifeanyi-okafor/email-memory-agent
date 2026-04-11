@@ -46,6 +46,7 @@ from agents.query_agent import QueryAgent
 from agents.action_agent import ActionAgent
 from agents.reconciliation_agent import ReconciliationAgent
 from agents.insights_agent import InsightsAgent
+from agents.vault_lint_agent import run_vault_lint
 
 # Import vault helper functions
 from pathlib import Path
@@ -156,6 +157,13 @@ class Orchestrator:
             'cross-correlate', 'connections', 'generate insights'
         ]):
             return self.generate_insights(user_input)
+
+        # ── Check for "lint"/"health check" intent ─────────────
+        elif any(kw in user_lower for kw in [
+            'lint', 'health check', 'vault health', 'audit vault',
+            'check vault', 'vault issues'
+        ]):
+            return self.lint_vault()
 
         # ── Check for "deduplicate" intent ──────────────────────
         elif any(kw in user_lower for kw in [
@@ -691,6 +699,33 @@ class Orchestrator:
         emit({
             "stage": "insights", "status": "complete",
             "message": "Insights generated"
+        })
+
+        return result
+
+    def lint_vault(self, progress_callback=None) -> str:
+        """
+        Run vault health checks and return a formatted report.
+
+        Checks for stale action items, orphaned files, empty content,
+        and other vault quality issues.
+        """
+        def emit(event):
+            if progress_callback:
+                progress_callback(event)
+
+        console.print("\n[bold cyan]Vault Health Check[/bold cyan] scanning for issues...\n")
+        emit({
+            "stage": "vault_lint", "status": "started",
+            "message": "Running vault health checks..."
+        })
+
+        result = run_vault_lint()
+
+        console.print(f"[green]{result.split(chr(10))[0]}[/green]\n")
+        emit({
+            "stage": "vault_lint", "status": "complete",
+            "message": result.split('\n')[0]
         })
 
         return result
