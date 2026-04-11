@@ -123,6 +123,30 @@ def build_knowledge_index() -> str:
         lines.extend(rows)
     else:
         lines.append('| (none) | | | |')
+    lines.append('')
+
+    # Organizations
+    org_rows = _build_organizations_rows()
+    sections = lines
+    sections.append("## Organizations")
+    sections.append("| File | Title | Domain | Industry | Relationship |")
+    sections.append("|------|-------|--------|----------|--------------|")
+    if org_rows:
+        sections.extend(org_rows)
+    else:
+        sections.append("| (none) | | | | |")
+
+    sections.append("")
+
+    # Projects
+    proj_rows = _build_projects_rows()
+    sections.append("## Projects")
+    sections.append("| File | Title | Status | Type |")
+    sections.append("|------|-------|--------|------|")
+    if proj_rows:
+        sections.extend(proj_rows)
+    else:
+        sections.append("| (none) | | | |")
 
     return '\n'.join(lines)
 
@@ -219,4 +243,37 @@ def _build_insights_rows() -> list[str]:
         insight_type = _safe(fm.get('insight_type', ''))
         status = _safe(fm.get('status', ''))
         rows.append(f'| {rel_path} | {title} | {insight_type} | {status} |')
+    return rows
+
+
+def _build_organizations_rows() -> list[str]:
+    """Build table rows for organization files."""
+    rows = []
+    org_dir = VAULT_ROOT / 'organizations'
+    if not org_dir.exists():
+        return rows
+    for md_file in sorted(org_dir.glob('*.md')):
+        fm = _parse_frontmatter(md_file)
+        rel_path = md_file.relative_to(VAULT_ROOT).as_posix()
+        title = _safe(fm.get('title', md_file.stem))
+        domain = _safe(fm.get('domain', ''))
+        industry = _safe(fm.get('industry', ''))
+        rel_type = _safe(fm.get('relationship_type', ''))
+        rows.append(f"| {rel_path} | {title} | {domain} | {industry} | {rel_type} |")
+    return rows
+
+
+def _build_projects_rows() -> list[str]:
+    """Build table rows for project files."""
+    rows = []
+    proj_dir = VAULT_ROOT / 'projects'
+    if not proj_dir.exists():
+        return rows
+    for md_file in sorted(proj_dir.glob('*.md')):
+        fm = _parse_frontmatter(md_file)
+        rel_path = md_file.relative_to(VAULT_ROOT).as_posix()
+        title = _safe(fm.get('title', md_file.stem))
+        status = _safe(fm.get('project_status', ''))
+        ptype = _safe(fm.get('project_type', ''))
+        rows.append(f"| {rel_path} | {title} | {status} | {ptype} |")
     return rows

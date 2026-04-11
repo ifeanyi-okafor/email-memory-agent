@@ -13,10 +13,11 @@ from memory.knowledge_index import build_knowledge_index
 # ── Test Helpers ──────────────────────────────────────────────────────
 
 def _setup_vault(tmp_path, monkeypatch):
-    """Create a temporary vault directory with all 5 type folders and patch VAULT_ROOT."""
+    """Create a temporary vault directory with all type folders and patch VAULT_ROOT."""
     vault = tmp_path / 'vault'
     vault.mkdir()
-    for mtype in ('people', 'decisions', 'commitments', 'action_required', 'insights'):
+    for mtype in ('people', 'decisions', 'commitments', 'action_required', 'insights',
+                  'organizations', 'projects'):
         (vault / mtype).mkdir()
     monkeypatch.setattr('memory.knowledge_index.VAULT_ROOT', vault)
     return vault
@@ -46,7 +47,7 @@ class TestBuildKnowledgeIndexEmpty:
         assert result.startswith('# Knowledge Index')
 
     def test_has_all_section_headers(self, tmp_path, monkeypatch):
-        """All five memory type sections should be present."""
+        """All seven memory type sections should be present."""
         _setup_vault(tmp_path, monkeypatch)
         result = build_knowledge_index()
         assert '## People' in result
@@ -54,13 +55,15 @@ class TestBuildKnowledgeIndexEmpty:
         assert '## Commitments' in result
         assert '## Action Items' in result
         assert '## Insights' in result
+        assert '## Organizations' in result
+        assert '## Projects' in result
 
     def test_empty_sections_show_none(self, tmp_path, monkeypatch):
         """Empty sections should show a (none) placeholder row."""
         _setup_vault(tmp_path, monkeypatch)
         result = build_knowledge_index()
-        # Each empty section gets a (none) row — 5 total
-        assert result.count('(none)') == 5
+        # Each empty section gets a (none) row — 7 total
+        assert result.count('(none)') == 7
 
     def test_has_entity_resolution_instructions(self, tmp_path, monkeypatch):
         """The index should include instructions about entity resolution."""
@@ -281,6 +284,21 @@ class TestBuildKnowledgeIndexMixed:
             'date': '2026-02-20',
             'category': 'insights',
         })
+        _write_vault_file(vault, 'organizations', 'acme-a1b2.md', {
+            'title': 'Acme Corp',
+            'date': '2026-02-20',
+            'domain': 'acme.com',
+            'industry': 'Technology',
+            'relationship_type': 'customer',
+            'category': 'organizations',
+        })
+        _write_vault_file(vault, 'projects', 'series-a-a1b2.md', {
+            'title': 'Series A Fundraising',
+            'date': '2026-02-20',
+            'project_status': 'active',
+            'project_type': 'deal',
+            'category': 'projects',
+        })
 
         result = build_knowledge_index()
         assert '(none)' not in result
@@ -303,7 +321,7 @@ class TestBuildKnowledgeIndexMixed:
         # People section should have Alice, not (none)
         assert 'Alice' in result
         # Other sections should have (none) since their folders don't exist
-        assert result.count('(none)') == 4
+        assert result.count('(none)') == 6
 
     def test_file_paths_are_posix_relative(self, tmp_path, monkeypatch):
         """File paths should use forward slashes and be relative to VAULT_ROOT."""
@@ -319,3 +337,53 @@ class TestBuildKnowledgeIndexMixed:
         assert 'people/alice-a1b2.md' in result
         # Should NOT contain the full tmp_path
         assert str(tmp_path) not in result
+
+
+# ============================================================================
+# NEW TYPES: ORGANIZATIONS & PROJECTS
+# ============================================================================
+
+class TestBuildKnowledgeIndexNewTypes:
+    def test_organizations_appear_with_domain(self, tmp_path, monkeypatch):
+        vault = _setup_vault(tmp_path, monkeypatch)
+        _write_vault_file(vault, 'organizations', 'acme-a1b2.md', {
+            'title': 'Acme Corp',
+            'date': '2026-02-20',
+            'category': 'organizations',
+            'domain': 'acme.com',
+            'industry': 'Technology',
+            'relationship_type': 'customer',
+        })
+        index = build_knowledge_index()
+        assert 'Acme Corp' in index
+        assert 'acme.com' in index
+        assert 'Technology' in index
+        assert 'customer' in index
+        assert 'organizations/acme-a1b2.md' in index
+
+    def test_projects_appear_with_status(self, tmp_path, monkeypatch):
+        vault = _setup_vault(tmp_path, monkeypatch)
+        _write_vault_file(vault, 'projects', 'series-a-a1b2.md', {
+            'title': 'Series A Fundraising',
+            'date': '2026-02-20',
+            'category': 'projects',
+            'project_status': 'active',
+            'project_type': 'deal',
+        })
+        index = build_knowledge_index()
+        assert 'Series A Fundraising' in index
+        assert 'active' in index
+        assert 'deal' in index
+        assert 'projects/series-a-a1b2.md' in index
+
+    def test_index_has_organizations_section_header(self, tmp_path, monkeypatch):
+        _setup_vault(tmp_path, monkeypatch)
+        index = build_knowledge_index()
+        assert '## Organizations' in index
+        assert '| File | Title | Domain | Industry | Relationship |' in index
+
+    def test_index_has_projects_section_header(self, tmp_path, monkeypatch):
+        _setup_vault(tmp_path, monkeypatch)
+        index = build_knowledge_index()
+        assert '## Projects' in index
+        assert '| File | Title | Status | Type |' in index
