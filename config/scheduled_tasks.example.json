@@ -1,0 +1,23 @@
+[
+    {
+        "name": "daily_lint",
+        "description": "Run vault health check daily",
+        "action": "lint",
+        "interval_hours": 24,
+        "enabled": true
+    },
+    {
+        "name": "daily_reconcile",
+        "description": "Reconcile action items against sent emails",
+        "action": "reconcile",
+        "interval_hours": 24,
+        "enabled": true
+    },
+    {
+        "name": "weekly_insights",
+        "description": "Generate cross-correlation insights weekly",
+        "action": "insights",
+        "interval_hours": 168,
+        "enabled": true
+    }
+]
