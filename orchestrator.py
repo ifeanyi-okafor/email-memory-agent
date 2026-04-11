@@ -54,6 +54,7 @@ from memory.vault import (
     get_processed_email_ids, save_processed_email_ids
 )
 from memory.graph import rebuild_graph
+from memory.knowledge_index import build_knowledge_index
 
 # Import Gmail fetch functions (incremental: list IDs first, then fetch by ID)
 from tools.gmail_tools import fetch_emails, list_email_ids, fetch_emails_by_ids
@@ -372,12 +373,19 @@ class Orchestrator:
             })
         self.memory_writer.on_retry = on_writer_retry
 
+        # Build the Knowledge Index so the agent knows what already exists
+        knowledge_index = build_knowledge_index()
+
         writer_prompt = (
             "Here are observations about the user extracted from their emails. "
             "These observations come from multiple batches, so you may see "
             "duplicate people (especially 'Me') — merge them when writing. "
-            "Process each observation and write it to the memory vault. "
-            "Check for existing memories first to avoid duplicates.\n\n"
+            "Process each observation and write it to the memory vault.\n\n"
+            "IMPORTANT: Use the Knowledge Index below to check what already exists "
+            "BEFORE creating new files. If an entity already appears in the index, "
+            "read it with read_memory and merge your new data.\n\n"
+            f"{knowledge_index}\n\n"
+            "---\n\n"
             f"OBSERVATIONS:\n{combined_observations}"
         )
 
