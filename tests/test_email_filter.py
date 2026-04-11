@@ -298,3 +298,40 @@ class TestFilterIntegration:
         assert len(signal) == 1
         assert len(noise) == 2
         assert signal[0]['id'] == 'msg_001'
+
+
+class TestFilterIntegrationGmailShaped:
+    """Verify the filter works on emails matching real Gmail fetch output format."""
+
+    def test_gmail_shaped_email_classification(self):
+        """Should correctly classify emails that look like real Gmail fetch output."""
+        emails = [
+            {
+                'id': '18e1234abc',
+                'from': 'Sarah Chen <sarah@acme.com>',
+                'subject': 'Re: Q2 Roadmap Review',
+                'date': '2026-04-10',
+                'body': 'Hey, I reviewed the doc. Looks good to me. Let us sync Thursday.',
+                'labels': ['INBOX', 'IMPORTANT'],
+            },
+            {
+                'id': '18e5678def',
+                'from': 'GitHub <noreply@github.com>',
+                'subject': '[org/repo] Issue #42 opened',
+                'body': 'A new issue was opened by user123. Reply to this email or view on GitHub.',
+                'labels': ['INBOX'],
+            },
+            {
+                'id': '18e9012ghi',
+                'from': 'deals@shopify.com',
+                'subject': 'Your weekly store report',
+                'body': 'Here is your weekly store summary. To unsubscribe, click here.',
+                'labels': ['CATEGORY_PROMOTIONS'],
+            },
+        ]
+
+        signal, noise = filter_emails(emails)
+
+        assert len(signal) == 1
+        assert signal[0]['id'] == '18e1234abc'
+        assert len(noise) == 2

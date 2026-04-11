@@ -58,6 +58,7 @@ from memory.knowledge_index import build_knowledge_index
 
 # Import Gmail fetch functions (incremental: list IDs first, then fetch by ID)
 from tools.gmail_tools import fetch_emails, list_email_ids, fetch_emails_by_ids
+from tools.email_filter import filter_emails
 
 # Import batch size config
 from config.settings import EMAIL_BATCH_SIZE
@@ -272,10 +273,33 @@ class Orchestrator:
             return "Failed to fetch new email content. Try again later."
 
         console.print(f"[green]OK - Fetched {len(emails)} new emails[/green]")
+
+        # ── Filter out noise emails ────────────────────────────
+        # Skip newsletters, receipts, notifications, cold outreach.
+        # This saves tokens and keeps the vault focused on real interactions.
+        signal_emails, noise_emails = filter_emails(emails)
+
+        if noise_emails:
+            console.print(f"   [dim]Filtered {len(noise_emails)} noise emails "
+                          f"(newsletters, notifications, etc.)[/dim]")
         emit({
             "stage": "fetching", "status": "complete",
-            "message": f"Fetched {len(emails)} new emails (skipped {len(all_ids) - len(new_ids)} already processed)"
+            "message": (f"Fetched {len(emails)} new emails "
+                        f"(skipped {len(all_ids) - len(new_ids)} already processed, "
+                        f"filtered {len(noise_emails)} noise)")
         })
+
+        if not signal_emails:
+            emit({"stage": "complete", "status": "complete",
+                  "message": f"All {len(emails)} new emails were noise (newsletters, etc.). Nothing to process.",
+                  "stats": get_vault_stats()})
+            # Still mark them as processed so we don't re-fetch next time
+            updated_ids = processed_ids | {e['id'] for e in emails}
+            save_processed_email_ids(updated_ids)
+            return f"All {len(emails)} new emails were noise. Nothing to process."
+
+        # Use signal_emails for the rest of the pipeline
+        emails = signal_emails
 
         # ── Step 2: Batch analyze ────────────────────────────
         # Split emails into batches and run the Email Reader on each.
