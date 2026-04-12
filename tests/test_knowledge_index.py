@@ -387,3 +387,19 @@ class TestBuildKnowledgeIndexNewTypes:
         index = build_knowledge_index()
         assert '## Projects' in index
         assert '| File | Title | Status | Type |' in index
+
+
+class TestBuildKnowledgeIndexConfidence:
+    def test_people_index_shows_confidence(self, tmp_path, monkeypatch):
+        """People table should include a confidence column."""
+        vault = _setup_vault(tmp_path, monkeypatch)
+        _write_vault_file(vault, 'people', 'alice-a1b2.md', {
+            'name': 'Alice',
+            'date': '2026-04-12',
+            'category': 'people',
+            'confidence': 'high',
+        })
+        index = build_knowledge_index()
+        assert 'high' in index
+        # Verify the header includes Confidence column
+        assert '| File | Name | Email | Organization | Role | Confidence |' in index

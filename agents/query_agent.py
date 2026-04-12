@@ -72,6 +72,20 @@ Projects capture initiatives/deals with status (active/planning/on-hold/complete
 The vault has a knowledge graph (_graph.json) that maps bidirectional relationships between all memories.
 Preferences, topics of interest, and communication style are captured within person files.
 
+CONTEXT OPTIMIZATION (IMPORTANT):
+You will receive a "Knowledge Index" — a compact table of all vault entities
+with their key metadata (name, email, org, role, status, confidence, etc).
+
+STRATEGY:
+1. For questions answerable from the index alone (e.g., "who works at Acme?",
+   "what's Alice's email?"), answer directly from the index without reading files
+2. For questions needing full context (e.g., "summarize my relationship with Alice"),
+   use search_vault or read_memory to load specific files
+3. Always prefer list_memories (metadata only) over read_memory (full content)
+   unless full body content is genuinely needed
+
+This saves tokens and speeds up responses.
+
 YOUR ROLE: Answer questions about the person using their memory vault.
 
 YOUR PROCESS:
@@ -223,3 +237,26 @@ RESPONSE STYLE:
 
         # Unknown tool — raise an error
         raise ValueError(f"Unknown tool: {tool_name}")
+
+    def ask_with_index(self, question: str) -> str:
+        """
+        Answer a query with the Knowledge Index injected into the prompt.
+
+        Builds a compact entity catalog and includes it before the user's
+        question, so the agent can answer metadata-level questions without
+        reading full files.
+        """
+        from memory.knowledge_index import build_knowledge_index
+
+        knowledge_index = build_knowledge_index()
+
+        prompt = (
+            f"Before answering, review this Knowledge Index showing all vault "
+            f"entities. For simple metadata questions, answer directly from the "
+            f"index. For deeper questions, use search_vault and read_memory.\n\n"
+            f"{knowledge_index}\n\n"
+            f"---\n\n"
+            f"USER QUESTION: {question}"
+        )
+
+        return self.run(prompt)

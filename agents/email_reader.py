@@ -176,6 +176,39 @@ PROJECT RULES:
 - Include status (active/planning/on-hold/completed/cancelled) and type (deal/product/initiative/hiring)
 - Link to related people and organizations via related_entities
 
+STATUS SIGNALS:
+When analyzing emails, watch for lifecycle events that should update an entity's status:
+- Person left their company: include in observation content; the Memory Writer may set status="left-org"
+- Decision reversed or superseded: note the reversal in the content; Memory Writer may set status="reversed"
+- Commitment completed or cancelled: note the outcome in the commitment observation
+
+Add a "status_hint" field to observations where the email indicates a state change:
+- "status_hint": "left-org" | "reversed" | "completed" | "cancelled" | null
+
+The Memory Writer will use these hints to set the status field on the resulting memory.
+
+CONFIDENCE SCORING (required for every observation):
+Add a "confidence" field to every observation with one of:
+- "high": Multiple corroborating emails (2+), explicit statement, recent (< 30 days)
+- "medium": Single source but clear/unambiguous, OR inferred from reliable context, OR somewhat recent (< 90 days)
+- "low": Single indirect mention, weakly inferred, stale (> 90 days), or contradictory evidence
+
+Example observation with confidence:
+{
+    "type": "people",
+    "title": "Alice Park — Designer",
+    "content": "Lead designer at Acme.",
+    "confidence": "high",
+    "evidence_emails": ["Re: design review"],
+    ...
+}
+
+GUIDELINES:
+- Default to "medium" if uncertain
+- Use "high" only when multiple emails corroborate the fact
+- Use "low" when you're inferring rather than reading an explicit statement
+- Confidence applies to the OVERALL observation, not individual fields
+
 GRANULARITY RULES (CRITICAL):
 - Create ONE observation per PERSON (not one observation for multiple people)
 - "People" means INDIVIDUAL HUMAN BEINGS only — NOT organizations, companies, brands, newsletters,

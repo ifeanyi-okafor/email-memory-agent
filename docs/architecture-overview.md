@@ -109,6 +109,7 @@ graph TB
 | Vault Lint Agent | `agents/vault_lint_agent.py` | Formats vault lint results into human-readable health report |
 | Change Detection | `memory/change_detection.py` | SHA-256 hash-based file change tracking |
 | Scheduler | `memory/scheduler.py` | Lightweight task scheduler with JSON config and state persistence |
+| Git history | `memory/git_history.py` | subprocess-based git wrapper for vault version history (init, commit, log) |
 | Config | `config/settings.py` | Central settings (paths, model, limits) |
 
 ## Key Design Decisions
@@ -128,3 +129,7 @@ graph TB
 - **Vault linting** — `memory/vault_lint.py` provides pure-function lint checks for vault health (stale action items, orphaned files, empty content). `agents/vault_lint_agent.py` formats results into a human-readable report. Triggered via `lint`/`health check`/`vault health` keywords.
 - **Change detection** — `memory/change_detection.py` tracks SHA-256 hashes of vault files in `_file_state.json`, enabling efficient detection of which files changed between runs.
 - **Background scheduling** — `memory/scheduler.py` is a lightweight task scheduler driven by a JSON config file (`config/scheduled_tasks.example.json`). State is persisted between runs. The `--run-scheduled` CLI flag in `main.py` executes any due tasks without starting the web server.
+- **Git version history** — the vault directory is its own standalone git repo. `memory/git_history.py` wraps subprocess git calls (init, add, commit, log) with no GitPython dependency. The orchestrator auto-commits after each pipeline stage (memory write, graph rebuild, actions, reconciliation, insights), giving every vault state a recoverable snapshot.
+- **Universal status fields** — every memory type (people, decisions, commitments, action_required) now carries `status`, `status_reason`, and `status_updated` fields. Email Reader emits `status_hint` signals on state-change evidence (e.g., person left org, decision reversed); Memory Writer propagates them into frontmatter.
+- **Universal confidence** — every memory type carries a `confidence` field (`high`/`medium`/`low`) reflecting the strength of evidence. Email Reader scores confidence based on corroboration, recency, and evidence type; Memory Writer passes it through. Insights already had this field; all other types now share it.
+- **Context-optimized queries** — `QueryAgent.ask_with_index(question)` injects the Knowledge Index into the prompt before searching the vault, giving the LLM a metadata-level overview of all entities. The orchestrator's `query_memory()` calls `ask_with_index` so every chat query benefits from this pre-filtering before the agent reads full files.

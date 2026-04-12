@@ -40,27 +40,35 @@ flowchart LR
         Dedup -->|Exists| Merge[Merge into existing]
     end
 
+    subgraph "Step 4.5: Git Commit"
+        Vault --> GC1[git commit — memory write]
+    end
+
     subgraph "Step 5: Track"
-        Vault --> IDs[Save processed IDs]
+        GC1 --> IDs[Save processed IDs]
     end
 
     subgraph "Step 6: Graph"
         IDs --> GR[Rebuild _graph.json]
+        GR --> GC2[git commit — graph rebuild]
     end
 
     subgraph "Step 7: Actions"
-        GR --> AA[Action Agent]
+        GC2 --> AA[Action Agent]
         AA -->|Claude API + vault + graph| Actions[action_required/ files]
+        Actions --> GC3[git commit — action agent]
     end
 
     subgraph "Step 8: Reconcile"
-        Actions --> RA[Reconciliation Agent]
+        GC3 --> RA[Reconciliation Agent]
         RA -->|heuristic + LLM + sent emails| StatusUpdates[Update status fields]
+        StatusUpdates --> GC4[git commit — reconciliation]
     end
 
     subgraph "Step 9: Insights"
-        StatusUpdates --> IA[Insights Agent]
+        GC4 --> IA[Insights Agent]
         IA -->|Claude API + vault + graph| Insights["insights/ files"]
+        Insights --> GC5[git commit — insights]
     end
 ```
 

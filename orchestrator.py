@@ -55,6 +55,7 @@ from memory.vault import (
     get_processed_email_ids, save_processed_email_ids
 )
 from memory.graph import rebuild_graph
+from memory.git_history import init_vault_repo, commit_vault_changes, is_vault_repo
 from memory.knowledge_index import build_knowledge_index
 
 # Import Gmail fetch functions (incremental: list IDs first, then fetch by ID)
@@ -88,6 +89,9 @@ class Orchestrator:
         """
         # Initialize the vault folder structure (creates folders if needed)
         initialize_vault()
+
+        # Initialize the vault as a git repository if not already
+        init_vault_repo()
 
         # Create one instance of each agent.
         # These persist across requests, which means their conversation
@@ -433,6 +437,9 @@ class Orchestrator:
         updated_ids = processed_ids | {e['id'] for e in emails}
         save_processed_email_ids(updated_ids)
 
+        # Auto-commit after memory writer
+        commit_vault_changes(f"Memory write: {len(emails)} emails processed")
+
         # ── Step 3.5: Rebuild knowledge graph ──────────────────
         console.print("\n[bold cyan]Step 3.5/5: Rebuilding knowledge graph[/bold cyan]")
         emit({
@@ -445,6 +452,7 @@ class Orchestrator:
             "stage": "graph_rebuild", "status": "complete",
             "message": f"Graph rebuilt: {len(graph['nodes'])} nodes, {len(graph['edges'])} edges"
         })
+        commit_vault_changes("Rebuild knowledge graph")
 
         # ── Step 4: Action Agent ──────────────────────────────
         console.print("\n[bold cyan]Step 4/5: Action Agent[/bold cyan]")
@@ -452,6 +460,7 @@ class Orchestrator:
             "Generate action items from the newly updated vault.",
             progress_callback=progress_callback
         )
+        commit_vault_changes("Generate action items")
 
         # ── Step 5: Reconcile action items ────────────────────
         console.print("\n[bold cyan]Step 5/5: Reconciling action items[/bold cyan]")
@@ -459,6 +468,7 @@ class Orchestrator:
             "Reconcile action items against sent emails.",
             progress_callback=progress_callback
         )
+        commit_vault_changes("Reconcile action item statuses")
 
         # ── Step 6: Generate insights ──────────────────────────
         console.print("\n[bold cyan]Step 6/6: Insights Agent[/bold cyan]")
@@ -466,6 +476,7 @@ class Orchestrator:
             "Generate insights from the full vault.",
             progress_callback=progress_callback
         )
+        commit_vault_changes("Generate insights")
 
         # ── Build summary ────────────────────────────────────
         stats = get_vault_stats()
@@ -778,8 +789,8 @@ class Orchestrator:
         """
         console.print("[bold cyan]Query Agent[/bold cyan] searching vault...\n")
 
-        # Call the Query Agent's agentic loop
-        return self.query_agent.run(user_input)
+        # Call the Query Agent's agentic loop with Knowledge Index injected
+        return self.query_agent.ask_with_index(user_input)
 
     def show_stats(self) -> str:
         """
