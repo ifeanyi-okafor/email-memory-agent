@@ -571,6 +571,9 @@ def write_memory(
             'memoryType': 'commitments',
             'priority': priority,
             'commitment_status': commitment_status or 'invited',
+            'status': status or 'active',
+            'status_reason': status_reason or '',
+            'status_updated': status_updated or today,
             'tags': tags or [],
             'related_to': related_to or [],
         }
@@ -602,6 +605,9 @@ def write_memory(
             'category': memory_type,
             'memoryType': memory_type,
             'priority': priority,
+            'status': status or 'active',
+            'status_reason': status_reason or '',
+            'status_updated': status_updated or today,
             'tags': tags or [],
             'related_to': related_to or [],
         }

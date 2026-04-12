@@ -82,3 +82,68 @@ class TestPeopleStatus:
         from datetime import datetime
         today = datetime.now().strftime('%Y-%m-%d')
         assert fm['status_updated'] == today
+
+
+class TestDecisionsStatus:
+    def test_decision_default_status_is_active(self, tmp_path, monkeypatch):
+        vault = _setup_vault(tmp_path, monkeypatch)
+        with patch('memory.graph.rebuild_graph', return_value={'nodes': {}, 'edges': []}):
+            from memory.vault import write_memory
+            filepath = write_memory(
+                title="Chose React for Frontend",
+                memory_type="decisions",
+                content="Team decided.",
+            )
+        text = Path(filepath).read_text(encoding='utf-8')
+        fm = yaml.safe_load(text.split('---')[1])
+        assert fm['status'] == 'active'
+
+    def test_decision_can_be_reversed(self, tmp_path, monkeypatch):
+        vault = _setup_vault(tmp_path, monkeypatch)
+        with patch('memory.graph.rebuild_graph', return_value={'nodes': {}, 'edges': []}):
+            from memory.vault import write_memory
+            filepath = write_memory(
+                title="Chose MongoDB",
+                memory_type="decisions",
+                content="Chose MongoDB initially.",
+                status="reversed",
+                status_reason="Switched to Postgres after performance issues",
+            )
+        text = Path(filepath).read_text(encoding='utf-8')
+        fm = yaml.safe_load(text.split('---')[1])
+        assert fm['status'] == 'reversed'
+        assert 'Postgres' in fm['status_reason']
+
+
+class TestCommitmentsStatus:
+    def test_commitment_default_status_is_active(self, tmp_path, monkeypatch):
+        vault = _setup_vault(tmp_path, monkeypatch)
+        with patch('memory.graph.rebuild_graph', return_value={'nodes': {}, 'edges': []}):
+            from memory.vault import write_memory
+            filepath = write_memory(
+                title="Q2 Review Meeting",
+                memory_type="commitments",
+                content="Attend Q2 review.",
+                commitment_status="confirmed",
+            )
+        text = Path(filepath).read_text(encoding='utf-8')
+        fm = yaml.safe_load(text.split('---')[1])
+        # Both status fields present
+        assert fm['commitment_status'] == 'confirmed'
+        assert fm['status'] == 'active'  # general lifecycle status
+
+    def test_commitment_completed_status(self, tmp_path, monkeypatch):
+        vault = _setup_vault(tmp_path, monkeypatch)
+        with patch('memory.graph.rebuild_graph', return_value={'nodes': {}, 'edges': []}):
+            from memory.vault import write_memory
+            filepath = write_memory(
+                title="Hyrox Race Feb 28",
+                memory_type="commitments",
+                content="Race completed.",
+                commitment_status="confirmed",
+                status="completed",
+                status_reason="Event took place and user participated",
+            )
+        text = Path(filepath).read_text(encoding='utf-8')
+        fm = yaml.safe_load(text.split('---')[1])
+        assert fm['status'] == 'completed'
