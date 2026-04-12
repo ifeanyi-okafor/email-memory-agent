@@ -32,6 +32,34 @@ Related: [[other-memory-filename]]
 | `organizations` | `vault/organizations/` | "Acme Corp — SaaS company, client relationship" |
 | `projects` | `vault/projects/` | "Project Atlas — active internal product initiative" |
 
+### Universal Fields
+
+All memory types share a common set of fields in their YAML frontmatter:
+
+| Field | Type | Values | Notes |
+| ----- | ---- | ------ | ----- |
+| `status` | string | type-specific (see below) | Current lifecycle state of the memory |
+| `status_reason` | string | free text | Explanation for the most recent status change |
+| `status_updated` | date | ISO date (`YYYY-MM-DD`) | Date of last status change |
+| `confidence` | string | `high` / `medium` / `low` | Strength of evidence supporting this memory |
+| `tags` | list | string list | Topic tags |
+| `related_to` | list | name/title list | Entities this memory links to (drives knowledge graph edges) |
+| `source_emails` | list | email subject strings | Source emails that generated or updated this memory |
+
+`status` values by type:
+
+| Type | Status values |
+| ---- | ------------ |
+| `people` | `active`, `left-org`, `inactive`, `unknown` |
+| `decisions` | `active`, `reversed`, `superseded`, `archived` |
+| `commitments` | `invited`, `confirmed`, `declined`, `tentative`, `completed`, `cancelled` |
+| `action_required` | `active`, `closed`, `expired` |
+| `insights` | `active`, `dismissed` |
+| `organizations` | `active`, `inactive`, `dissolved` |
+| `projects` | `active`, `paused`, `completed`, `cancelled` |
+
+`confidence` is scored by the Email Reader based on corroboration, recency, and evidence type, then propagated by the Memory Writer into frontmatter. Insights had this field first; all other types share it as of Priority 4–5.
+
 ### Commitment Frontmatter
 
 `commitments` files include a participation lifecycle field:
@@ -136,7 +164,7 @@ Insight status values:
 | `active` | Insight is current and relevant (default) |
 | `dismissed` | User dismissed the insight via chat or UI |
 
-Confidence values: `high`, `medium`
+Confidence values: `high`, `medium`, `low`
 
 ### Action Required Frontmatter
 
@@ -205,6 +233,22 @@ Edge types: `related_to` (from frontmatter), `backlink` / `referenced_by` (auto-
 
 Graph logic lives in `memory/graph.py`. Backlinks are auto-injected into file frontmatter `related_to` arrays.
 
+## Vault Git History
+
+The vault directory is its own standalone git repository, giving every vault state a recoverable snapshot. Logic lives in `memory/git_history.py` (subprocess wrapper — no GitPython dependency).
+
+Auto-commit points in the build pipeline:
+
+| Stage | Commit message |
+| ----- | -------------- |
+| After Memory Writer writes vault files | `chore: memory write — <timestamp>` |
+| After graph rebuild | `chore: graph rebuild — <timestamp>` |
+| After Action Agent | `chore: action agent — <timestamp>` |
+| After Reconciliation Agent | `chore: reconciliation — <timestamp>` |
+| After Insights Agent | `chore: insights — <timestamp>` |
+
+On first run, `git_history.py` initialises the vault as a git repo (`git init`) if one does not already exist. Each auto-commit stages all vault files (`git add -A`) and creates a commit with a timestamped message. The commit history provides a full audit trail of vault evolution across pipeline runs.
+
 ## Processed Email Tracking
 
 | File | Format | Purpose |
@@ -245,10 +289,10 @@ Produces a markdown string with one table per memory type:
 # Knowledge Index
 
 ## People
-| File | Name | Email | Organization | Role |
-|------|------|-------|--------------|------|
-| people/me.md | John Doe | john@example.com | TechCorp | PM |
-| people/sarah-chen-a1b2.md | Sarah Chen | sarah@acme.com | Acme Corp | VP Engineering |
+| File | Name | Email | Organization | Role | Confidence |
+|------|------|-------|--------------|------|------------|
+| people/me.md | John Doe | john@example.com | TechCorp | PM | high |
+| people/sarah-chen-a1b2.md | Sarah Chen | sarah@acme.com | Acme Corp | VP Engineering | medium |
 
 ## Decisions
 | File | Title | Date | Tags |

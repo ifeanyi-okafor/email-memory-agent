@@ -60,8 +60,11 @@ Improve agent intelligence, vault quality, and add new memory types.
 - [x] 3.22 Vault Lint Agent — detects stale action items, orphaned files, and empty content
 - [x] 3.23 File change detection with SHA-256 hashing (`memory/change_detection.py`)
 - [x] 3.24 Background task scheduler with CLI runner (`memory/scheduler.py`, `--run-scheduled` flag)
-- [ ] 3.25 Memory confidence scoring and source attribution
-- [ ] 3.26 Query Agent context window optimization
+- [x] 3.25 Git version history for vault (auto-commit after each pipeline stage, `memory/git_history.py`)
+- [x] 3.26 Universal status fields on people/decisions/commitments (active | reversed | left-org | completed etc.)
+- [x] 3.27 Universal confidence field on all memory types (high/medium/low)
+- [x] 3.28 Confidence column in Knowledge Index people table
+- [x] 3.29 QueryAgent context optimization via Knowledge Index injection (`ask_with_index`)
 
 ## Phase 4: Polish & Deployment
 Production hardening, performance, and deployment.
