@@ -187,6 +187,28 @@ Add a "status_hint" field to observations where the email indicates a state chan
 
 The Memory Writer will use these hints to set the status field on the resulting memory.
 
+CONFIDENCE SCORING (required for every observation):
+Add a "confidence" field to every observation with one of:
+- "high": Multiple corroborating emails (2+), explicit statement, recent (< 30 days)
+- "medium": Single source but clear/unambiguous, OR inferred from reliable context, OR somewhat recent (< 90 days)
+- "low": Single indirect mention, weakly inferred, stale (> 90 days), or contradictory evidence
+
+Example observation with confidence:
+{
+    "type": "people",
+    "title": "Alice Park — Designer",
+    "content": "Lead designer at Acme.",
+    "confidence": "high",
+    "evidence_emails": ["Re: design review"],
+    ...
+}
+
+GUIDELINES:
+- Default to "medium" if uncertain
+- Use "high" only when multiple emails corroborate the fact
+- Use "low" when you're inferring rather than reading an explicit statement
+- Confidence applies to the OVERALL observation, not individual fields
+
 GRANULARITY RULES (CRITICAL):
 - Create ONE observation per PERSON (not one observation for multiple people)
 - "People" means INDIVIDUAL HUMAN BEINGS only — NOT organizations, companies, brands, newsletters,

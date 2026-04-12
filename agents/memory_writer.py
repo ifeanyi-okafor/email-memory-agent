@@ -125,6 +125,13 @@ Status VALUES by type:
 - commitments: active | completed | cancelled (in addition to commitment_status)
 - action_required: active | closed | expired | dismissed
 
+CONFIDENCE FIELD (required):
+Every memory must include a confidence field (high | medium | low):
+- Pass the confidence score from the Email Reader observation directly to write_memory
+- If the observation lacks a confidence field, default to "medium"
+- When merging new data into an existing memory, keep the HIGHER confidence value
+  (unless the new data contradicts the old — then lower to "low")
+
 WHEN TO SET NON-DEFAULT STATUS:
 - If an email explicitly says a person left their company → status="left-org"
 - If a decision was reversed or replaced by a newer one → status="reversed"
@@ -429,6 +436,11 @@ When you receive a Knowledge Index in your prompt, USE IT to resolve entities:
                         "status_reason": {
                             "type": "string",
                             "description": "Human-readable explanation for why the status was set"
+                        },
+                        "confidence": {
+                            "type": "string",
+                            "enum": ["high", "medium", "low"],
+                            "description": "Confidence score for this memory. Pass through from Email Reader observation."
                         }
                     },
                     "required": ["title", "memory_type", "content"]
