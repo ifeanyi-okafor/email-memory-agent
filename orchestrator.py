@@ -789,8 +789,8 @@ class Orchestrator:
         """
         console.print("[bold cyan]Query Agent[/bold cyan] searching vault...\n")
 
-        # Call the Query Agent's agentic loop
-        return self.query_agent.run(user_input)
+        # Call the Query Agent's agentic loop with Knowledge Index injected
+        return self.query_agent.ask_with_index(user_input)
 
     def show_stats(self) -> str:
         """
