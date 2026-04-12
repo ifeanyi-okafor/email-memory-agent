@@ -392,6 +392,9 @@ def write_memory(
             'phone': phone or '',
             'location': location or '',
             'timezone': timezone or '',
+            'status': status or 'active',
+            'status_reason': status_reason or '',
+            'status_updated': status_updated or today,
             'tags': tags or [],
             'related_to': related_to or [],
         }
