@@ -68,13 +68,13 @@ def build_knowledge_index() -> str:
     # ── People ────────────────────────────────────────────────────
     lines.append('## People')
     lines.append('')
-    lines.append('| File | Name | Email | Organization | Role |')
-    lines.append('|------|------|-------|--------------|------|')
+    lines.append('| File | Name | Email | Organization | Role | Confidence |')
+    lines.append('|------|------|-------|--------------|------|------------|')
     rows = _build_people_rows()
     if rows:
         lines.extend(rows)
     else:
-        lines.append('| (none) | | | | |')
+        lines.append('| (none) | | | | | |')
     lines.append('')
 
     # ── Decisions ─────────────────────────────────────────────────
@@ -172,7 +172,8 @@ def _build_people_rows() -> list[str]:
         email = _safe(fm.get('email', ''))
         org = _safe(fm.get('organization', ''))
         role = _safe(fm.get('role', ''))
-        rows.append(f'| {rel_path} | {name} | {email} | {org} | {role} |')
+        conf = _safe(fm.get('confidence', ''))
+        rows.append(f'| {rel_path} | {name} | {email} | {org} | {role} | {conf} |')
     return rows
 
 
