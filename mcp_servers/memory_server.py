@@ -80,6 +80,11 @@ async def list_tools() -> list[Tool]:
                     "status_updated": {"type": "string"},
                     "insight_type": {"type": "string", "enum": ["relationship", "execution_gap", "strategic_pattern"]},
                     "confidence": {"type": "string", "enum": ["high", "medium"]},
+                    "org_domain": {"type": "string"},
+                    "org_industry": {"type": "string"},
+                    "org_relationship": {"type": "string"},
+                    "project_status": {"type": "string", "enum": ["active", "planning", "on-hold", "completed", "cancelled"]},
+                    "project_type": {"type": "string"},
                 },
                 "required": ["title", "memory_type", "content"]
             }
@@ -190,6 +195,11 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             status_updated=arguments.get('status_updated'),
             insight_type=arguments.get('insight_type'),
             confidence=arguments.get('confidence'),
+            org_domain=arguments.get('org_domain'),
+            org_industry=arguments.get('org_industry'),
+            org_relationship=arguments.get('org_relationship'),
+            project_status=arguments.get('project_status'),
+            project_type=arguments.get('project_type'),
         )
         return [TextContent(type="text", text=f"Memory written to: {filepath}")]
 

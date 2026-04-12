@@ -99,8 +99,53 @@ def main():
         help="Host to bind to. Use 0.0.0.0 for network access (default: 127.0.0.1)"
     )
 
+    # "--run-scheduled" flag: run any due scheduled tasks and exit.
+    # Designed to be called by an OS-level scheduler (cron / Task Scheduler)
+    # rather than starting the web server.
+    parser.add_argument(
+        '--run-scheduled', action='store_true',
+        help='Run any due scheduled tasks and exit'
+    )
+
     # Parse the arguments (reads sys.argv behind the scenes)
     args = parser.parse_args()
+
+    # ── Handle --run-scheduled flag ────────────────────────────
+    # When this flag is passed, run any due scheduled tasks and exit
+    # without starting the web server. Intended for use with cron /
+    # Windows Task Scheduler.
+    if args.run_scheduled:
+        from memory.scheduler import get_due_tasks, mark_task_run
+        from orchestrator import Orchestrator
+
+        orch = Orchestrator()
+        due = get_due_tasks()
+
+        if not due:
+            print("No scheduled tasks are due.")
+        else:
+            for task in due:
+                print(f"Running scheduled task: {task['name']} ({task.get('description', '')})")
+                action = task.get('action', '')
+
+                if action == 'lint':
+                    result = orch.lint_vault()
+                elif action == 'reconcile':
+                    result = orch.reconcile_actions("Scheduled reconciliation")
+                elif action == 'insights':
+                    result = orch.generate_insights("Scheduled insights generation")
+                elif action == 'refresh_actions':
+                    result = orch.refresh_actions("Scheduled action refresh")
+                elif action == 'build':
+                    result = orch.build_memory("Scheduled build")
+                else:
+                    print(f"  Unknown action: {action}")
+                    continue
+
+                mark_task_run(task['name'])
+                print(f"  Done: {result[:200]}...")
+
+        sys.exit(0)
 
     # ── Check that uvicorn is installed ────────────────────────
     # Uvicorn is the ASGI server that actually runs our FastAPI app.

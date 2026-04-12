@@ -55,8 +55,13 @@ Improve agent intelligence, vault quality, and add new memory types.
 - [x] 3.17 Email noise filter — heuristic classifier skips newsletters/receipts/notifications before LLM processing (`tools/email_filter.py`)
 - [x] 3.18 Knowledge Index wired into build pipeline (orchestrator builds index, injects into MemoryWriter prompt)
 - [x] 3.19 Email noise filter wired into build pipeline (filter between fetch and batch analyze)
-- [ ] 3.20 Memory confidence scoring and source attribution
-- [ ] 3.21 Query Agent context window optimization
+- [x] 3.20 Organizations as first-class entity type (domain, industry, relationship_type frontmatter)
+- [x] 3.21 Projects as first-class entity type (project_status, project_type frontmatter)
+- [x] 3.22 Vault Lint Agent — detects stale action items, orphaned files, and empty content
+- [x] 3.23 File change detection with SHA-256 hashing (`memory/change_detection.py`)
+- [x] 3.24 Background task scheduler with CLI runner (`memory/scheduler.py`, `--run-scheduled` flag)
+- [ ] 3.25 Memory confidence scoring and source attribution
+- [ ] 3.26 Query Agent context window optimization
 
 ## Phase 4: Polish & Deployment
 Production hardening, performance, and deployment.

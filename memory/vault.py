@@ -63,11 +63,13 @@ VAULT_ROOT = Path('vault')
 # Each one gets its own subfolder inside the vault.
 # This is the "taxonomy" — the classification system for memories.
 MEMORY_TYPES = [
-    'decisions',       # Choices: "chose React over Vue"
-    'people',          # Contacts: "Sarah — CTO at Acme" (also captures preferences, topics, comm style)
-    'commitments',     # Promises: "review PRs by Friday"
-    'action_required', # Action items: prioritized by Eisenhower matrix with justification
-    'insights',        # Cross-correlation intelligence derived from vault analysis
+    'decisions',        # Choices: "chose React over Vue"
+    'people',           # Contacts: "Sarah — CTO at Acme"
+    'commitments',      # Promises: "review PRs by Friday"
+    'action_required',  # Action items: prioritized by Eisenhower matrix
+    'insights',         # Cross-correlation intelligence
+    'organizations',    # Companies, teams, institutions the user interacts with
+    'projects',         # Initiatives, deals, products the user is involved in
 ]
 
 
@@ -233,6 +235,13 @@ def write_memory(
     phone: str = None,
     location: str = None,
     timezone: str = None,
+    # Organization-specific fields (optional, only used when memory_type == 'organizations')
+    org_domain: str = None,
+    org_industry: str = None,
+    org_relationship: str = None,
+    # Project-specific fields (optional, only used when memory_type == 'projects')
+    project_status: str = None,
+    project_type: str = None,
 ) -> str:
     """
     Create or update a memory file in the vault.
@@ -461,6 +470,77 @@ def write_memory(
             frontmatter['source_emails'] = source_emails
 
         # Build wiki-links section
+        wiki_links_section = ''
+        if related_to:
+            links = ', '.join([f'[[{entity}]]' for entity in related_to])
+            wiki_links_section = f'\n**Related:** {links}\n'
+
+        yaml_str = yaml.dump(frontmatter, default_flow_style=False, sort_keys=False)
+        file_content = f"""---
+{yaml_str.strip()}
+---
+
+# {title}
+
+{wiki_links_section}
+{content}
+"""
+
+    elif memory_type == 'organizations':
+        # ── Organization-specific frontmatter ─────────────────
+        # Organizations are companies, teams, or institutions the user
+        # interacts with. They have a domain, industry, and relationship type.
+        frontmatter = {
+            'title': title,
+            'date': today,
+            'updated': today,
+            'category': 'organizations',
+            'memoryType': 'organizations',
+            'priority': priority,
+            'domain': org_domain or '',
+            'industry': org_industry or '',
+            'relationship_type': org_relationship or '',
+            'tags': tags or [],
+            'related_to': related_to or [],
+        }
+        if source_emails:
+            frontmatter['source_emails'] = source_emails
+
+        wiki_links_section = ''
+        if related_to:
+            links = ', '.join([f'[[{entity}]]' for entity in related_to])
+            wiki_links_section = f'\n**Related:** {links}\n'
+
+        yaml_str = yaml.dump(frontmatter, default_flow_style=False, sort_keys=False)
+        file_content = f"""---
+{yaml_str.strip()}
+---
+
+# {title}
+
+{wiki_links_section}
+{content}
+"""
+
+    elif memory_type == 'projects':
+        # ── Project-specific frontmatter ──────────────────────
+        # Projects are initiatives, deals, or products the user tracks.
+        # They have a status lifecycle and a type classification.
+        frontmatter = {
+            'title': title,
+            'date': today,
+            'updated': today,
+            'category': 'projects',
+            'memoryType': 'projects',
+            'priority': priority,
+            'project_status': project_status or 'active',
+            'project_type': project_type or '',
+            'tags': tags or [],
+            'related_to': related_to or [],
+        }
+        if source_emails:
+            frontmatter['source_emails'] = source_emails
+
         wiki_links_section = ''
         if related_to:
             links = ', '.join([f'[[{entity}]]' for entity in related_to])
@@ -708,6 +788,11 @@ def list_memories(memory_type: str = None) -> list[dict]:
                     'commitment_status': mem['frontmatter'].get('commitment_status') if mtype == 'commitments' else None,
                     'insight_type': mem['frontmatter'].get('insight_type') if mtype == 'insights' else None,
                     'confidence': mem['frontmatter'].get('confidence') if mtype == 'insights' else None,
+                    'domain': mem['frontmatter'].get('domain') if mtype == 'organizations' else None,
+                    'industry': mem['frontmatter'].get('industry') if mtype == 'organizations' else None,
+                    'relationship_type': mem['frontmatter'].get('relationship_type') if mtype == 'organizations' else None,
+                    'project_status': mem['frontmatter'].get('project_status') if mtype == 'projects' else None,
+                    'project_type': mem['frontmatter'].get('project_type') if mtype == 'projects' else None,
                 })
 
     return memories
