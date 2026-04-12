@@ -176,6 +176,17 @@ PROJECT RULES:
 - Include status (active/planning/on-hold/completed/cancelled) and type (deal/product/initiative/hiring)
 - Link to related people and organizations via related_entities
 
+STATUS SIGNALS:
+When analyzing emails, watch for lifecycle events that should update an entity's status:
+- Person left their company: include in observation content; the Memory Writer may set status="left-org"
+- Decision reversed or superseded: note the reversal in the content; Memory Writer may set status="reversed"
+- Commitment completed or cancelled: note the outcome in the commitment observation
+
+Add a "status_hint" field to observations where the email indicates a state change:
+- "status_hint": "left-org" | "reversed" | "completed" | "cancelled" | null
+
+The Memory Writer will use these hints to set the status field on the resulting memory.
+
 GRANULARITY RULES (CRITICAL):
 - Create ONE observation per PERSON (not one observation for multiple people)
 - "People" means INDIVIDUAL HUMAN BEINGS only — NOT organizations, companies, brands, newsletters,
