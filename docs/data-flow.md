@@ -18,13 +18,23 @@ flowchart LR
         NewIDs -->|"messages.get × N"| New[New Emails JSON]
     end
 
+    subgraph "Step 1d: Noise Filter"
+        New --> Filter{"Signal or noise?"}
+        Filter -->|Noise| Drop[Skip newsletters/receipts/notifications]
+        Filter -->|Signal| Signal[Signal Emails]
+    end
+
     subgraph "Step 2: Batch Analyze"
-        New -->|Batches of 10| ER[Email Reader Agent]
+        Signal -->|Batches of 10| ER[Email Reader Agent]
         ER -->|Claude API| Observations[Text Observations]
     end
 
+    subgraph "Step 3: Build Knowledge Index"
+        Observations --> KI[Scan vault → entity catalog]
+    end
+
     subgraph "Step 4: Write + Dedup"
-        Observations --> MW[Memory Writer Agent]
+        KI -->|Index + Observations| MW[Memory Writer Agent]
         MW -->|Claude API + MCP tools| Dedup{Duplicate check}
         Dedup -->|New| Vault[Vault Files]
         Dedup -->|Exists| Merge[Merge into existing]

@@ -50,6 +50,8 @@ from pathlib import Path
 #   tags: [work, meetings]
 import yaml
 
+from memory.changelog import append_changelog
+
 
 # ── CONSTANTS ──────────────────────────────────────────────────────────
 
@@ -556,11 +558,20 @@ def write_memory(
     from memory.graph import rebuild_graph
     rebuild_graph()
 
-    # Detect whether this was an update to an existing people file.
-    # "original_date" is only defined inside the people branch above,
-    # so we guard with a memory_type check first.
-    is_update = (memory_type == 'people') and (original_date != today)
-    action = "UPDATED" if is_update else "WRITE"
+    # ── Log to changelog ───────────────────────────────────────
+    # Determine if this was a create or update.
+    # A write is an UPDATE if:
+    #   - We found a duplicate and redirected to an existing file, OR
+    #   - For people files, the original_date differs from today (file existed)
+    is_update = duplicate_path is not None if 'duplicate_path' in locals() else False
+    if not is_update and memory_type == 'people':
+        is_update = (original_date != today)
+    action = "UPDATED" if is_update else "CREATED"
+
+    rel_path = filepath.relative_to(VAULT_ROOT).as_posix()
+    description = name if (memory_type == 'people' and name) else title
+    append_changelog(action, rel_path, description)
+
     print(f"   [{action}] Written: {filepath}")
 
     return str(filepath)

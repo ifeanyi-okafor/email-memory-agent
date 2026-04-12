@@ -219,6 +219,16 @@ TOKEN OPTIMIZATION:
 - Include only essential context and evidence
 
 When done, return a summary of memories created, updated, and skipped.
+
+KNOWLEDGE INDEX:
+When you receive a Knowledge Index in your prompt, USE IT to resolve entities:
+- Before creating a new person file, check if they appear in the People table
+- Before creating a new commitment, check if a similar one exists in Commitments
+- Before creating a new decision, check if a similar one exists in Decisions
+- If a matching entity exists in the index, use its file path with read_memory to load
+  the existing content, then merge your new data into it
+- The index provides: file path, name/title, and key metadata for every vault entity
+- This is MORE RELIABLE than search_vault for duplicate detection — use it first
 """
 
         # ── Tool Definitions ───────────────────────────────────
