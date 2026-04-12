@@ -142,3 +142,27 @@ class TestGetVaultLog:
         assert 'sha' in entry
         assert 'message' in entry
         assert 'timestamp' in entry
+
+
+class TestOrchestratorInit:
+    def test_orchestrator_init_creates_git_repo(self, tmp_path, monkeypatch):
+        """Creating an Orchestrator should initialize the vault git repo."""
+        vault = _setup_vault(tmp_path, monkeypatch)
+        # Patch all vault paths the Orchestrator uses
+        import memory.vault
+        import memory.dedup
+        import memory.changelog
+        import memory.knowledge_index
+        import memory.graph
+        monkeypatch.setattr(memory.vault, 'VAULT_ROOT', vault)
+        monkeypatch.setattr(memory.dedup, 'VAULT_ROOT', vault)
+        monkeypatch.setattr(memory.changelog, 'CHANGELOG_FILE', vault / '_changelog.md')
+        monkeypatch.setattr(memory.knowledge_index, 'VAULT_ROOT', vault)
+        monkeypatch.setattr(memory.graph, 'VAULT_ROOT', vault)
+        monkeypatch.setattr(memory.graph, 'GRAPH_FILE', vault / '_graph.json')
+
+        # Creating the Orchestrator should initialize the git repo
+        from orchestrator import Orchestrator
+        _ = Orchestrator()
+
+        assert is_vault_repo() is True
